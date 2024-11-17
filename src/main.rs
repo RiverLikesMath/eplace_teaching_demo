@@ -7,7 +7,7 @@ use std::f64::consts::PI;
 //TODO: FUTURE SO BRIGHT I NEED SHADES
 
 // upload to github
-// split into multiple files, i think, main's getting too big, how does that work in rust 
+// split into multiple files, i think, main's getting too big, how does that work in rust
 // figure out the inverse 2D DCT, inverse DCST, and inverse DSCT
 
 const bin_w: f64 = 1.; //bin width and height
@@ -61,23 +61,22 @@ fn main() {
 
     //we'll also need the electric field, which requires some cosine/sine transforms of the density matrix
 
-
     let lambda_0_upper = wl_grad.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
     let charges = array![2.25, 2.25, 2.25, 2.25];
 
-    let coefficients    = dct_coeff(&density, m);
+    let coefficients = dct_coeff(&density, m);
     //inverse cosine transform of coefficients will get you the density
-    //the plan -> multiply coefficients by the relevant factor from equation 23, inverse 2D cosine transform, that gets you potential for each bin 
-    //multiply the coefficients by relevant factor from equation 24, inverse sine cosine transform, that gets you electric field in the X direction 
-    //multiply the coefficients by the relevant Y factors from equation 24, inverse cosine sine tranform, that gets you electric field in the Y direction. 
-    
-    //I've already confirmed that the transforms as described in the paper work beautifully for density, even with only 
-    //16x16 bins, at least as far as the toy example here goes. 
-    let potential    = eplace_potential(&coefficients, m); //not yet implemented 
-    let elec_field_x = eplace_elec_x(&coefficients, m); //not yet implemented 
+    //the plan -> multiply coefficients by the relevant factor from equation 23, inverse 2D cosine transform, that gets you potential for each bin
+    //multiply the coefficients by relevant factor from equation 24, inverse sine cosine transform, that gets you electric field in the X direction
+    //multiply the coefficients by the relevant Y factors from equation 24, inverse cosine sine tranform, that gets you electric field in the Y direction.
+
+    //I've already confirmed that the transforms as described in the paper work beautifully for density, even with only
+    //16x16 bins, at least as far as the toy example here goes.
+    let potential = eplace_potential(&coefficients, m); //not yet implemented
+    let elec_field_x = eplace_elec_x(&coefficients, m); //not yet implemented
     let elec_field_y = eplace_elec_y(&coefficients, m); //not yet implemented
-    //each of these functions will generate a potential, electric field x, or electric field y for *each* bin! 
-    //those will then be applied to given cells  
+                                                        //each of these functions will generate a potential, electric field x, or electric field y for *each* bin!
+                                                        //those will then be applied to given cells
 }
 
 /// only pass floats for x and y that are integers
@@ -301,7 +300,7 @@ fn eplace_dct_auv(density: &Array2<f64>, m: usize, u: usize, v: usize) -> f64 {
     2. * coefficient
 }
 
-///probably not going to use this, just pick its code for parts and switch directly to fft library 
+///probably not going to use this, just pick its code for parts and switch directly to fft library
 fn elec_field(cell_centers: &Array2<f64>, coefficients: &Array2<f64>, m: usize) -> Array1<f64> {
     let mut elec_field = Array1::<f64>::zeros(cell_centers.len());
     dbg!(&cell_centers);
@@ -312,22 +311,19 @@ fn elec_field(cell_centers: &Array2<f64>, coefficients: &Array2<f64>, m: usize) 
                 let w_v = calc_w(v, m);
                 let x = cell_centers[[i / 2, 0]];
                 let y = cell_centers[[i / 2, 1]];
-                if (u == 0 && v == 0 )
-                //formula as written has a divide by zero here 
+                if u == 0 && v == 0
+                //formula as written has a divide by zero here
                 {
-                    elec_field[i]+=0.; 
-                }
-                
-                else if i % 2 == 0 {
+                    elec_field[i] += 0.;
+                } else if i % 2 == 0 {
                     //x coord
                     let deriv_coeff_x = coefficients[[u, v]] * w_u / (w_u.powi(2) + w_v.powi(2));
-                    
+
                     elec_field[i] += deriv_coeff_x * (w_u * x).sin() * (w_v * y).cos();
-                }
-                 else if i % 2 == 1 {
+                } else if i % 2 == 1 {
                     //y coord
                     let deriv_coeff_y = coefficients[[u, v]] * w_v / (w_u.powi(2) + w_v.powi(2));
-                    
+
                     elec_field[i] += deriv_coeff_y * (w_u * x).cos() * (w_v * y).sin();
                 }
             }
