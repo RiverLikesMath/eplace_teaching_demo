@@ -5,40 +5,36 @@ use ndarray::array;
 mod dct;
 mod density;
 mod wl_grad;
-//TODO: FUTURE SO BRIGHT I NEED SHADES
-
-// upload to github
-// split into multiple files, i think, main's getting too big, how does that work in rust
-// figure out the inverse 2D DCT, inverse DCST, and inverse DSCT
 
 const bin_w: f64 = 1.; //bin width and height
-const bin_area: f64 = 1.;
 
 ///in this oversimplified example, there will be 4 logic elements placed on a 16 x 16 grid
 ///
 ///each logic element will be 1.5 pixel wide and tall so we don't have to worry about eplace's
 ///smoothing.
 ///for simplicities sake, we'll assume all the elements are on a single global net. this is very
-//silly, but it'll make the demonstration a bit easier
+///silly, but it'll make the demonstration a bit easier
 fn main() {
     let cell_centers = array![
         [28. / 8., 28. / 8.], //x,y, initial placement
         [56. / 8., 58. / 8.],
         [9. / 8., 19. / 8.],
         [99. / 8., 101. / 8.0],
-        //  [10.8, 6.7],
-        //  [ 1.27, 2.04]
+        [10.8, 6.7],
+        [1.27, 2.04],
+        [14.81, 14.25],
+        [14.22, 14.44]
     ];
 
-    let m: usize = 16; // m == sqrt(number of bins), max 1024, must be pover of 2
+    let m: usize = 32; // m == sqrt(number of bins), max 1024, must be pover of 2
 
-    let mut density = density::calc_density(&cell_centers, m); // mxm density calculation, overlaps of
-                                                               // cells with bin , this is what we'll run
-                                                               // our first DCT on
-                                                               //fine, we'll make this mutable later so rust stops complaining
-                                                               //minimum density overflowtau_min is 0.1 in their benchmarks, but we're only running for 10 or so
-                                                               //iterations. Todo: precise definition of minimum density overflow. we'll only define if we use
-                                                               //let minimum_overflow_density = 0.10;
+    let density = density::calc_density(&cell_centers, m); // mxm density calculation, overlaps of
+                                                           // cells with bin , this is what we'll run
+                                                           // our first DCT on
+                                                           //fine, we'll make this mutable later so rust stops complaining
+                                                           //minimum density overflowtau_min is 0.1 in their benchmarks, but we're only running for 10 or so
+                                                           //iterations. Todo: precise definition of minimum density overflow. we'll only define if we use
+                                                           //let minimum_overflow_density = 0.10;
 
     // the next step is lambda_0, that's equation 35, remember that the the equation we're
     // optimizing for is W(v) + lamdba * N(v), where v is the placement solution
@@ -62,81 +58,21 @@ fn main() {
 
     //we'll also need the electric field, which requires some cosine/sine transforms of the density matrix
 
-    let lambda_0_upper = wl_gradient.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
-    let charges = array![2.25, 2.25, 2.25, 2.25];
+    //  let lambda_0_upper = wl_gradient.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
+    //   let charges = array![2.25, 2.25, 2.25, 2.25];
 
-    let coefficients = dct::dct_coeff(&density, m);
+    let coeffs = dct::calc_coeffs(&density, m);
+    let new_coeffs = dct::new_coeffs(&density, m);
 
-    let density_0_0 = dct::eplace_dct(&coefficients, m, 0., 0.);
-    dbg!(density_0_0);
+    dct::check_density(&coeffs, &density, m);
+    println!("density");
+    println!("{:.4}", &density);
+    println!("coefficients");
+    println!("{:.4}", &coeffs);
 
-    //inverse cosine transform of coefficients will get you the density
-    //the plan -> multiply coefficients by the relevant factor from equation 23, inverse 2D cosine transform, that gets you potential for each bin
-    //multiply the coefficients by relevant factor from equation 24, inverse sine cosine transform, that gets you electric field in the X direction
-    //multiply the coefficients by the relevant Y factors from equation 24, inverse cosine sine tranform, that gets you electric field in the Y direction.
-
-    //I've already confirmed that the transforms as described in the paper work beautifully for density, even with only
-    //16x16 bins, at least as far as the toy example here goes.
-    //    let potential = eplace_potential(&coefficients, m); //not yet implemented
-    //    let elec_field_x = eplace_elec_x(&coefficients, m); //not yet implemented
-    //    let elec_field_y = eplace_elec_y(&coefficients, m); //not yet implemented
-    //each of these functions will generate a potential, electric field x, or electric field y for *each* bin!
-    //those will then be applied to given cells
+    println!("reference elec field x");
+    let slow_elecx = dct::eplace_elec_field_x(&coeffs, m);
+    println!("{:.4}", &slow_elecx);
+    dct::test_elec_field_x(&coeffs, &slow_elecx, m);
+    println!("------- end electrostatic stuff");
 }
-
-//probably not going to use this, just pick its code for parts and switch directly to fft library
-/*fn elec_field(cell_centers: &Array2<f64>, coefficients: &Array2<f64>, m: usize) -> Array1<f64> {
-    let mut elec_field = Array1::<f64>::zeros(cell_centers.len());
-    dbg!(&cell_centers);
-    for i in 0..elec_field.len() {
-        for u in 0..m {
-            for v in 0..m {
-                let w_u = calc_w(u, m);
-                let w_v = calc_w(v, m);
-                let x = cell_centers[[i / 2, 0]];
-                let y = cell_centers[[i / 2, 1]];
-                if u == 0 && v == 0
-                //formula as written has a divide by zero here
-                {
-                    elec_field[i] += 0.;
-                } else if i % 2 == 0 {
-                    //x coord
-                    let deriv_coeff_x = coefficients[[u, v]] * w_u / (w_u.powi(2) + w_v.powi(2));
-
-                    elec_field[i] += deriv_coeff_x * (w_u * x).sin() * (w_v * y).cos();
-                } else if i % 2 == 1 {
-                    //y coord
-                    let deriv_coeff_y = coefficients[[u, v]] * w_v / (w_u.powi(2) + w_v.powi(2));
-
-                    elec_field[i] += deriv_coeff_y * (w_u * x).cos() * (w_v * y).sin();
-                }
-            }
-        }
-    }
-    elec_field
-}
-*/
-// not yet implemented fast version of DCT. the code below is sample code from the library and not related to the paper
-// transformed_matrix = dct(density)
-// then call the inverse
-
-//fft is a discrete fourier transform
-//you can think of the fft as having a sine component and a cosine component
-//if you only need to calculate the cosine component, you use the discrete cosine transform, DCT
-//
-/*
-    let (nx, ny) = (16, 16);
-    let mut data = Array2::<f64>::zeros((nx, ny));
-    let mut vhat = Array2::<Complex<f64>>::zeros((nx / 2 + 1, ny));
-    for (i, v) in data.iter_mut().enumerate() {
-        *v = i as f64;
-    }
-    let mut fft_handler = R2cFftHandler::<f64>::new(nx);
-    ndfft_r2c(&data.view(), &mut vhat.view_mut(), &mut fft_handler, 0);
-    dbg!(&vhat);
-    dbg!(&data);
-    println!("spacer");
-    for axis in vhat.axes() {
-      dbg!(axis);
-    }
-*/
