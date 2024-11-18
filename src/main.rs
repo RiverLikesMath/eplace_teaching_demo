@@ -72,9 +72,9 @@ fn main() {
 
     //I've already confirmed that the transforms as described in the paper work beautifully for density, even with only
     //16x16 bins, at least as far as the toy example here goes.
-    let potential = eplace_potential(&coefficients, m); //not yet implemented
-    let elec_field_x = eplace_elec_x(&coefficients, m); //not yet implemented
-    let elec_field_y = eplace_elec_y(&coefficients, m); //not yet implemented
+//    let potential = eplace_potential(&coefficients, m); //not yet implemented
+//    let elec_field_x = eplace_elec_x(&coefficients, m); //not yet implemented
+//    let elec_field_y = eplace_elec_y(&coefficients, m); //not yet implemented
                                                         //each of these functions will generate a potential, electric field x, or electric field y for *each* bin!
                                                         //those will then be applied to given cells
 }
