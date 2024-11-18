@@ -1,8 +1,8 @@
-use ndarray::{array, Array1, Array2, ArrayView1, Axis};
+use ndarray::array;
 
 //use ndrustfft::{ndfft_r2c, Complex, R2cFftHandler};
-use std::f64::consts::PI;
 
+mod dct;
 mod density;
 mod wl_grad;
 //TODO: FUTURE SO BRIGHT I NEED SHADES
@@ -65,7 +65,11 @@ fn main() {
     let lambda_0_upper = wl_gradient.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
     let charges = array![2.25, 2.25, 2.25, 2.25];
 
-    let coefficients = dct_coeff(&density, m);
+    let coefficients = dct::dct_coeff(&density, m);
+
+    let density_0_0 = dct::eplace_dct(&coefficients, m, 0., 0.);
+    dbg!(density_0_0);
+
     //inverse cosine transform of coefficients will get you the density
     //the plan -> multiply coefficients by the relevant factor from equation 23, inverse 2D cosine transform, that gets you potential for each bin
     //multiply the coefficients by relevant factor from equation 24, inverse sine cosine transform, that gets you electric field in the X direction
@@ -80,65 +84,8 @@ fn main() {
     //those will then be applied to given cells
 }
 
-fn calc_w(index: usize, m: usize) -> f64 {
-    2.0 * PI * (index as f64) / (m as f64)
-}
-fn dct_coeff(density: &Array2<f64>, m: usize) -> Array2<f64> {
-    let mut coefficients = Array2::<f64>::zeros((m, m));
-    for u in 0..m {
-        for v in 0..m {
-            coefficients[[u, v]] = eplace_dct_auv(density, m, u, v);
-        }
-    }
-    coefficients
-}
-fn eplace_dct(coefficients: &Array2<f64>, m: usize, x: f64, y: f64) -> f64 {
-    let mut density_dct = 0.;
-
-    for u in 0..m {
-        for v in 0..m {
-            density_dct += coefficients[[u, v]]
-                * (calc_w(u, m) * (x as f64)).cos()
-                * (calc_w(v, m) * (y as f64)).cos();
-            if u == 0 && v < 3 {
-                dbg!(
-                    coefficients[[u, v]],
-                    calc_w(u, m),
-                    calc_w(v, m),
-                    u,
-                    v,
-                    x,
-                    y,
-                    &density_dct
-                );
-            }
-        }
-    }
-    //subtract DC component
-    dbg!(m);
-    dbg!(&density_dct);
-    //    dbg!(&density);
-    density_dct -= coefficients[[0, 0]];
-    density_dct
-}
-
-fn eplace_dct_auv(density: &Array2<f64>, m: usize, u: usize, v: usize) -> f64 {
-    let scale_factor = 1_f64 / (m.pow(2) as f64); //1/m^2
-
-    let mut coefficient: f64 = 0.0; // a_u,v
-    for x in 0..m {
-        for y in 0..m {
-            coefficient += scale_factor
-                * density[[x, y]]
-                * (calc_w(u, m) * (x as f64)).cos()
-                * (calc_w(v, m) * (y as f64)).cos();
-        }
-    }
-    2. * coefficient
-}
-
-///probably not going to use this, just pick its code for parts and switch directly to fft library
-fn elec_field(cell_centers: &Array2<f64>, coefficients: &Array2<f64>, m: usize) -> Array1<f64> {
+//probably not going to use this, just pick its code for parts and switch directly to fft library
+/*fn elec_field(cell_centers: &Array2<f64>, coefficients: &Array2<f64>, m: usize) -> Array1<f64> {
     let mut elec_field = Array1::<f64>::zeros(cell_centers.len());
     dbg!(&cell_centers);
     for i in 0..elec_field.len() {
@@ -168,7 +115,7 @@ fn elec_field(cell_centers: &Array2<f64>, coefficients: &Array2<f64>, m: usize) 
     }
     elec_field
 }
-
+*/
 // not yet implemented fast version of DCT. the code below is sample code from the library and not related to the paper
 // transformed_matrix = dct(density)
 // then call the inverse
