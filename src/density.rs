@@ -1,6 +1,6 @@
-use ndarray::{Array2, Axis}; 
+use ndarray::{Array2, Axis};
 
-const bin_w: f64 = 1.; 
+const bin_w: f64 = 1.;
 
 fn add_density(density: &mut Array2<f64>, x: usize, y: usize, added_density: f64) {
     density[[x, y]] += added_density;
