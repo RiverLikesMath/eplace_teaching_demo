@@ -1,4 +1,4 @@
-use ndarray::array;
+use ndarray::{array, Array1, Array2};
 
 //use ndrustfft::{ndfft_r2c, Complex, R2cFftHandler};
 
@@ -9,13 +9,12 @@ mod wl_grad;
 const bin_w: f64 = 1.; //bin width and height
 
 ///in this oversimplified example, there will be 4 logic elements placed on a 16 x 16 grid
-///
 ///each logic element will be 1.5 pixel wide and tall so we don't have to worry about eplace's
 ///smoothing.
 ///for simplicities sake, we'll assume all the elements are on a single global net. this is very
 ///silly, but it'll make the demonstration a bit easier
 fn main() {
-    let cell_centers = array![
+     let cell_centers = array![
         [28. / 8., 28. / 8.], //x,y, initial placement
         [56. / 8., 58. / 8.],
         [9. / 8., 19. / 8.],
@@ -23,10 +22,19 @@ fn main() {
         [10.8, 6.7],
         [1.27, 2.04],
         [14.81, 14.25],
-        [14.22, 14.44]
+        [14.22, 14.44],
+        [1.0, 1.0],
+        [2.0,2.0],
+        [3.0,3.0],
+        [4.0,4.0],
+        [5.0, 4.0],
+        [6.0, 6.0],
+        [5.5,5.5],
+        [4.75,4.75],
+        [5.25, 5.25],
     ];
 
-    let m: usize = 32; // m == sqrt(number of bins), max 1024, must be pover of 2
+    let m: usize = 16; // m == sqrt(number of bins), max 1024, must be power of 2
 
     let density = density::calc_density(&cell_centers, m); // mxm density calculation, overlaps of
                                                            // cells with bin , this is what we'll run
@@ -53,26 +61,34 @@ fn main() {
     //very well defined, and while it's related to the wirelength function it doesn't necessarily
     //depend on it.
 
-    let wl_gradient = wl_grad::calc_wl_grad(&cell_centers);
-    dbg!(&wl_gradient);
-
+   // let wl_gradient = wl_grad::calc_wl_grad(&cell_centers);
+    
     //we'll also need the electric field, which requires some cosine/sine transforms of the density matrix
 
     //  let lambda_0_upper = wl_gradient.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
     //   let charges = array![2.25, 2.25, 2.25, 2.25];
 
-    let coeffs = dct::calc_coeffs(&density, m);
-    let new_coeffs = dct::new_coeffs(&density, m);
-
+    let coeffs = dct::new_coeffs(&density, m);
     dct::check_density(&coeffs, &density, m);
-    println!("density");
-    println!("{:.4}", &density);
-    println!("coefficients");
-    println!("{:.4}", &coeffs);
 
-    println!("reference elec field x");
-    let slow_elecx = dct::eplace_elec_field_x(&coeffs, m);
-    println!("{:.4}", &slow_elecx);
-    dct::test_elec_field_x(&coeffs, &slow_elecx, m);
+
+    let ref_coeffs = dct::dct_coeff(&density, m); // reference a_u_vs using the slow method described in the paper
+    let row = 0; 
+ 
+
+    let diff = &coeffs.row(row) - &ref_coeffs.row(row);
+    let div = &coeffs.row(row) / &ref_coeffs.row(row);
+    println!("test coefficients diff then div");
+    println!("{:.4}", diff);
+    println!("{:.4}", div);
     println!("------- end electrostatic stuff");
+    let slow_elec_x = dct::eplace_elec_field_x(&coeffs, m);
+    dct::test_elec_field_x(&coeffs, &slow_elec_x , m);
+}
+
+
+
+fn fancyprint2(arr : &Array2<f64>) {
+    println!("{:.4}", arr);
+
 }

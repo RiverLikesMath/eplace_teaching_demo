@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 ndrustfft ="0.5.0"
 ndarray   ="0.16.1"
+rustdct   ="0.7.1"

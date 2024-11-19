@@ -1,31 +1,78 @@
-use ndarray::{Array,Array2, arr2, ShapeBuilder};
-use ndrustfft::{nddct2, nddct3, DctHandler};
-use rustdct::DctPlanner;
+use ndarray::Array2;
+use ndrustfft::{nddct2, nddct3,  DctHandler, Normalization};
+use rustdct::{DctPlanner};
 use std::f64::consts::PI;
 
 ///calculate the a_u_vs from eq ( ) using an fft library
-pub fn calc_coeffs(pos_density: &Array2<f64>, m: usize) -> Array2<f64> {
-    
-    let dc_component  = pos_density.sum(); 
-    let dc_array      = Array::from_elem( (m,m), dc_component); 
-
-    
-    let density = pos_density - &dc_array; 
-     
-    let handler: DctHandler<f64> = DctHandler::new(m);
-
+pub fn calc_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
+    let handler: DctHandler<f64> = DctHandler::new(m).normalization(Normalization::None); 
+        
     let mut first_pass = Array2::<f64>::zeros((m, m));
     let mut coeffs = Array2::<f64>::zeros((m, m));
-
-    let scale_factor = 1. / (2. * (m as f64).powi(2));
-
-    let scaled_den = density.map(|x| x * (scale_factor));
-
-    nddct2(&scaled_den, &mut first_pass, &handler, 1);
-    nddct2(&first_pass, &mut coeffs, &handler, 0);
-
     
+    //cosine transform on the rows
+    nddct2(&density, &mut first_pass, &handler,0);
+
+    //cosine transform on the columns
+    nddct2(&first_pass, &mut coeffs, &handler, 1);
+
+    coeffs.mapv_inplace(|x|  x / ( (m as f64). powi(2)));
+
     coeffs
+}
+
+
+pub fn check_density(coeffs: &Array2<f64>, density: &Array2<f64>, m: usize) {
+    let handler: DctHandler<f64> = DctHandler::new(m);//.normalization(Normalization::None);
+    let mut first_pass = Array2::<f64>::zeros((m, m));
+    let mut density_dct = Array2::<f64>::zeros((m, m));
+
+
+    nddct3(&coeffs, &mut first_pass, &handler, 0);
+    nddct3(&first_pass, &mut density_dct, &handler, 1);
+
+    let test_density = &density.row(0) - &density_dct.row(0);
+    let test_density_div = &density.row(0) / &density_dct.row(0);
+
+    println!("------check density stuff");
+    println!("test density diff then div");
+    println!("{:.4}", &test_density);
+    println!("{:.4}", &test_density_div);
+
+
+}
+
+pub fn dct_coeff(density: &Array2<f64>, m: usize) -> Array2<f64> {
+    let mut coeffs = Array2::<f64>::zeros((m, m));
+    for u in 0..m {
+        for v in 0..m {
+            coeffs[[u, v]] = eplace_dct_auv(density, m, u, v);
+        }
+    }
+
+  //  coeffs.mapv_inplace(|x| x - dc);
+    coeffs
+}
+
+
+fn eplace_dct_auv(density: &Array2<f64>, m: usize, u: usize, v: usize) -> f64 {
+    let scale_factor = 1. / (m.pow(2) as f64); //1/m^2
+
+    let mut coefficient: f64 = 0.0; // a_u,v
+    for x in 0..m {
+        for y in 0..m {
+            coefficient += scale_factor
+                * density[[x, y]]
+                * (calc_w(u, m) * (x as f64)).cos()
+                * (calc_w(v, m) * (y as f64)).cos();
+        }
+    }
+    coefficient
+}
+
+
+fn calc_w(index: usize, m: usize) -> f64 {
+    2.0 * PI * (index as f64) / (m as f64)
 }
 
 
@@ -34,8 +81,8 @@ pub fn new_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
 
     let mut planner = DctPlanner::new();
     let dct2 = planner.plan_dct2(m);
-     
-    
+
+    //run a cosine transform on each row
     for row in 0..m {
         let mut buffer = density.row(row).to_vec();
         dct2.process_dct2(&mut buffer);
@@ -44,6 +91,7 @@ pub fn new_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
         }
     }
 
+    //run another cosine transform on the columns that result
     for col in 0..m {
         let mut buffer = coeffs.column(col).to_vec();
         dct2.process_dct2(&mut buffer);
@@ -52,14 +100,10 @@ pub fn new_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
         }
     }
     coeffs.mapv_inplace(|x| x / (m as f64).powi(2)); //divide by m^2
-    let dc_comp = coeffs[[0,0]]; 
-    dbg!(&dc_comp); 
-    println!(" hello yes we're drawing atttention to \n the thing above us \n pplease notice it \n is it there"); 
-    coeffs.mapv_inplace(|x| x - dc_comp); 
-
 
     coeffs
 }
+
 fn potential_coeff(w_u: f64, w_v: f64) -> f64 {
     if w_u == 0. && w_v == 0. {
         0.
@@ -67,7 +111,6 @@ fn potential_coeff(w_u: f64, w_v: f64) -> f64 {
         1. / (w_u.powi(2) + w_v.powi(2))
     }
 }
-
 fn elec_coeff_x(u: usize, v: usize, m: usize) -> f64 {
     let w_u = calc_w(u, m);
     let w_v = calc_w(v, m);
@@ -79,7 +122,6 @@ fn elec_coeff_x(u: usize, v: usize, m: usize) -> f64 {
     }
     elec_coeff
 }
-
 pub fn elec_field_x(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut elec_x = Array2::<f64>::zeros((m, m));
 
@@ -96,7 +138,7 @@ pub fn elec_field_x(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
 
     let mut post_cos = Array2::<f64>::zeros((m, m));
 
-    //cos on each row  
+    //cos on each row
     for row in 0..m {
         let mut buffer = elec_coeffs.row(row).to_vec();
         dct.process_dct3(&mut buffer);
@@ -108,21 +150,21 @@ pub fn elec_field_x(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
             }
         }
     }
-       println!("post_cos");
-      println!("{:.4}", &post_cos);
+
 
     //sin on each column
     for col in 0..m {
         let mut buffer2 = post_cos.column(col).to_vec();
         dst.process_dst3(&mut buffer2);
-        if col ==0 {   dbg!(col, &buffer2);};
+        if col == 0 {
+            dbg!(col, &buffer2);
+        };
         for row in 0..m {
             elec_x[[row, col]] = buffer2[row];
         }
     }
     elec_x
 }
-
 pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
     let fast_elec_x = elec_field_x(&coeffs, m);
     let row = 7;
@@ -134,29 +176,6 @@ pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
     println!("{:.4}", diff);
     println!("x electr field, ration of ref and fft");
     println!("{:.4}", div);
-}
-
-pub fn check_density(coeffs: &Array2<f64>, density: &Array2<f64>, m: usize) {
-    let handler: DctHandler<f64> = DctHandler::new(m);
-    let mut first_pass = Array2::<f64>::zeros((m, m));
-
-    nddct3(&coeffs, &mut first_pass, &handler, 0);
-
-    let mut density_dct = Array2::<f64>::zeros((m, m));
-
-    nddct3(&first_pass, &mut density_dct, &handler, 1);
-    density_dct.mapv_inplace(|x| x); //scale, the dct gets you something off by 2
-
-    let test_density = &density.row(0) - &density_dct.row(0);
-    let test_density_div = &density.row(0) / &density_dct.row(0);
-
-    println!("------check density stuff");
-    println!("test_density_sub, then test_density_div");
-    println!("{:.4}", &test_density);
-    println!("{:.4}", &test_density_div);
-    println!("final retrieved density");
-    println!("{:.4}", &density_dct);
-    println!("--------------");
 }
 
 /// calculate the electric field in the x direction using the slow (DSCT) algorithm in the paper
@@ -196,18 +215,6 @@ fn calc_elec_point(coefficients: &Array2<f64>, m: usize, x: usize, y: usize) -> 
     field_x_at_point
 }
 
-///calculate the a_u_vs from eq ( ) using the slower cosine transform as directly described in the
-///paper
-pub fn dct_coeff(density: &Array2<f64>, m: usize) -> Array2<f64> {
-    let mut coefficients = Array2::<f64>::zeros((m, m));
-    for u in 0..m {
-        for v in 0..m {
-            coefficients[[u, v]] = eplace_dct_auv(density, m, u, v);
-        }
-    }
-    coefficients
-}
-
 pub fn eplace_dct(coefficients: &Array2<f64>, m: usize, x: f64, y: f64) -> f64 {
     let mut density_dct = 0.;
 
@@ -218,29 +225,10 @@ pub fn eplace_dct(coefficients: &Array2<f64>, m: usize, x: f64, y: f64) -> f64 {
                 * (calc_w(v, m) * (y as f64)).cos();
         }
     }
-    //subtract DC componentt
-    dbg!(m);
-    dbg!(&density_dct);
+  
     //    dbg!(&density);
-    density_dct -= coefficients[[0, 0]];
     density_dct
 }
 
-fn eplace_dct_auv(density: &Array2<f64>, m: usize, u: usize, v: usize) -> f64 {
-    let scale_factor = 1_f64 / (m.pow(2) as f64); //1/m^2
 
-    let mut coefficient: f64 = 0.0; // a_u,v
-    for x in 0..m {
-        for y in 0..m {
-            coefficient += scale_factor
-                * density[[x, y]]
-                * (calc_w(u, m) * (x as f64)).cos()
-                * (calc_w(v, m) * (y as f64)).cos();
-        }
-    }
-    2. * coefficient
-}
 
-fn calc_w(index: usize, m: usize) -> f64 {
-    2.0 * PI * (index as f64) / (m as f64)
-}

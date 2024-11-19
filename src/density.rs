@@ -1,4 +1,4 @@
-use ndarray::{Array2, Axis};
+use ndarray::{Array, Array2, Axis};
 
 const bin_w: f64 = 1.;
 
@@ -79,11 +79,18 @@ pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
         }
 
         //add density of completely filled bins
-        for x in ((left_edge_bin + 1.) as usize)..(right_edge_bin as usize) {
+         for x in ((left_edge_bin + 1.) as usize)..(right_edge_bin as usize) {
             for y in ((lower_edge_bin + 1.) as usize)..(upper_edge_bin as usize) {
                 add_density(&mut density, x, y, 1.);
             }
         }
+       
     }
+
+    //subtract the DC component (the total density / m^2 )
+ //   let dc_component = density.sum() / (m as f64).powi(2);
+ //   let dc_array = Array::from_elem((m, m), dc_component);
+  //  let zeroed_density = &density - &dc_array;
+
     density
 }
