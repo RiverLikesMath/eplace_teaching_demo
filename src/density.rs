@@ -10,10 +10,6 @@ fn add_density(density: &mut Array2<f64>, x: usize, y: usize, added_density: f64
 ///there's probably a shorter clearer way to do this
 pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut density = Array2::<f64>::zeros((m, m));
-    //density[[0, 7]] = 29.0;
-    //density[[4, 12]] = 3.0;
-    //dbg!(&density);
-    dbg!(cell_centers);
     for cell in 0..cell_centers.len_of(Axis(0)) {
         //calculate which bins its in
         //calculate the overlap with each bin
