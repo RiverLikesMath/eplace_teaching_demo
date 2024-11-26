@@ -4,6 +4,8 @@ use ndarray::{array, Array1, Array2};
 
 mod dct;
 mod density;
+mod ref_dct;
+mod util;
 mod wl_grad;
 
 const bin_w: f64 = 1.; //bin width and height
@@ -71,10 +73,6 @@ fn main() {
     let coeffs = dct::calc_coeffs(&density, m);
     dct::check_density(&coeffs, &density, m);
 
-    let slow_elec_x = dct::eplace_elec_field_x(&coeffs, m);
+    let slow_elec_x = ref_dct::ref_elec_field_x(&coeffs, m);
     dct::test_elec_field_x(&coeffs, &slow_elec_x, m);
-}
-
-fn fancyprint2(arr: &Array2<f64>) {
-    println!("{:.4}", arr);
 }
