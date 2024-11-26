@@ -56,7 +56,7 @@ pub fn dct_coeff(density: &Array2<f64>, m: usize) -> Array2<f64> {
 
 
 fn eplace_dct_auv(density: &Array2<f64>, m: usize, u: usize, v: usize) -> f64 {
-    let scale_factor = 1. / (m.pow(2) as f64); //1/m^2
+    let scale_factor = 1. / ( (m as f64).powi(2)); //1/m^2
 
     let mut coefficient: f64 = 0.0; // a_u,v
     for x in 0..m {
