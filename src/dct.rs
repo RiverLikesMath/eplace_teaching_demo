@@ -1,32 +1,30 @@
 use ndarray::Array2;
-use ndrustfft::{nddct2, nddct3,  DctHandler, Normalization};
-use rustdct::{DctPlanner};
+use ndrustfft::{nddct2, nddct3, DctHandler, Normalization};
+use rustdct::DctPlanner;
 use std::f64::consts::PI;
 
 ///calculate the a_u_vs from eq ( ) using an fft library
 pub fn calc_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
-    let handler: DctHandler<f64> = DctHandler::new(m).normalization(Normalization::None); 
-        
+    let handler: DctHandler<f64> = DctHandler::new(m).normalization(Normalization::None);
+
     let mut first_pass = Array2::<f64>::zeros((m, m));
     let mut coeffs = Array2::<f64>::zeros((m, m));
-    
+
     //cosine transform on the rows
-    nddct2(&density, &mut first_pass, &handler,0);
+    nddct2(&density, &mut first_pass, &handler, 0);
 
     //cosine transform on the columns
     nddct2(&first_pass, &mut coeffs, &handler, 1);
 
-    coeffs.mapv_inplace(|x|  x / ( (m as f64). powi(2)));
+    coeffs.mapv_inplace(|x| x / ((m as f64).powi(2)));
 
     coeffs
 }
 
-
 pub fn check_density(coeffs: &Array2<f64>, density: &Array2<f64>, m: usize) {
-    let handler: DctHandler<f64> = DctHandler::new(m);//.normalization(Normalization::None);
+    let handler: DctHandler<f64> = DctHandler::new(m); //.normalization(Normalization::None);
     let mut first_pass = Array2::<f64>::zeros((m, m));
     let mut density_dct = Array2::<f64>::zeros((m, m));
-
 
     nddct3(&coeffs, &mut first_pass, &handler, 0);
     nddct3(&first_pass, &mut density_dct, &handler, 1);
@@ -38,8 +36,6 @@ pub fn check_density(coeffs: &Array2<f64>, density: &Array2<f64>, m: usize) {
     println!("test density diff then div");
     println!("{:.4}", &test_density);
     println!("{:.4}", &test_density_div);
-
-
 }
 
 pub fn dct_coeff(density: &Array2<f64>, m: usize) -> Array2<f64> {
@@ -50,13 +46,12 @@ pub fn dct_coeff(density: &Array2<f64>, m: usize) -> Array2<f64> {
         }
     }
 
-  //  coeffs.mapv_inplace(|x| x - dc);
+    //  coeffs.mapv_inplace(|x| x - dc);
     coeffs
 }
 
-
 fn eplace_dct_auv(density: &Array2<f64>, m: usize, u: usize, v: usize) -> f64 {
-    let scale_factor = 1. / ( (m as f64).powi(2)); //1/m^2
+    let scale_factor = 1. / ((m as f64).powi(2)); //1/m^2
 
     let mut coefficient: f64 = 0.0; // a_u,v
     for x in 0..m {
@@ -70,11 +65,9 @@ fn eplace_dct_auv(density: &Array2<f64>, m: usize, u: usize, v: usize) -> f64 {
     coefficient
 }
 
-
 fn calc_w(index: usize, m: usize) -> f64 {
     2.0 * PI * (index as f64) / (m as f64)
 }
-
 
 pub fn new_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut coeffs = Array2::<f64>::zeros((m, m));
@@ -151,14 +144,11 @@ pub fn elec_field_x(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
         }
     }
 
-
     //sin on each column
     for col in 0..m {
         let mut buffer2 = post_cos.column(col).to_vec();
         dst.process_dst3(&mut buffer2);
-        if col == 0 {
-            dbg!(col, &buffer2);
-        };
+
         for row in 0..m {
             elec_x[[row, col]] = buffer2[row];
         }
@@ -225,10 +215,7 @@ pub fn eplace_dct(coefficients: &Array2<f64>, m: usize, x: f64, y: f64) -> f64 {
                 * (calc_w(v, m) * (y as f64)).cos();
         }
     }
-  
+
     //    dbg!(&density);
     density_dct
 }
-
-
-

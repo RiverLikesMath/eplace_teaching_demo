@@ -75,12 +75,11 @@ pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
         }
 
         //add density of completely filled bins
-         for x in ((left_edge_bin + 1.) as usize)..(right_edge_bin as usize) {
+        for x in ((left_edge_bin + 1.) as usize)..(right_edge_bin as usize) {
             for y in ((lower_edge_bin + 1.) as usize)..(upper_edge_bin as usize) {
                 add_density(&mut density, x, y, 1.);
             }
         }
-       
     }
 
     //subtract the DC component (the total density / m^2 )
