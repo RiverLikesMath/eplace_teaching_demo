@@ -8,8 +8,6 @@ mod ref_dct;
 mod util;
 mod wl_grad;
 
-const bin_w: f64 = 1.; //bin width and height
-
 ///in this oversimplified example, there will be 4 logic elements placed on a 16 x 16 grid
 ///each logic element will be 1.5 pixel wide and tall so we don't have to worry about eplace's
 ///smoothing.
@@ -63,11 +61,11 @@ fn main() {
     //very well defined, and while it's related to the wirelength function it doesn't necessarily
     //depend on it.
 
-    // let wl_gradient = wl_grad::calc_wl_grad(&cell_centers);
+    let wl_gradient = wl_grad::calc_wl_grad(&cell_centers);
 
     //we'll also need the electric field, which requires some cosine/sine transforms of the density matrix
 
-    //  let lambda_0_upper = wl_gradient.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
+    let lambda_0_upper = wl_gradient.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
     //   let charges = array![2.25, 2.25, 2.25, 2.25];
 
     let coeffs = dct::calc_coeffs(&density, m);
@@ -75,4 +73,6 @@ fn main() {
 
     let slow_elec_x = ref_dct::ref_elec_field_x(&coeffs, m);
     dct::test_elec_field_x(&coeffs, &slow_elec_x, m);
+
+
 }
