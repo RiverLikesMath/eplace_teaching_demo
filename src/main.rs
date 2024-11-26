@@ -1,3 +1,4 @@
+
 use ndarray::{array, Array1, Array2};
 
 //use ndrustfft::{ndfft_r2c, Complex, R2cFftHandler};
@@ -70,23 +71,10 @@ fn main() {
 
     let coeffs = dct::new_coeffs(&density, m);
     dct::check_density(&coeffs, &density, m);
-
-
-    let ref_coeffs = dct::dct_coeff(&density, m); // reference a_u_vs using the slow method described in the paper
-    let row = 0; 
- 
-
-    let diff = &coeffs.row(row) - &ref_coeffs.row(row);
-    let div = &coeffs.row(row) / &ref_coeffs.row(row);
-    println!("test coefficients diff then div");
-    println!("{:.4}", diff);
-    println!("{:.4}", div);
-    println!("------- end electrostatic stuff");
     let slow_elec_x = dct::eplace_elec_field_x(&coeffs, m);
-    dct::test_elec_field_x(&coeffs, &slow_elec_x , m);
+    dct::test_elec_field_x(&coeffs,  &slow_elec_x, m);
+;
 }
-
-
 
 fn fancyprint2(arr : &Array2<f64>) {
     println!("{:.4}", arr);
