@@ -1,6 +1,6 @@
 use ndarray::{Array, Array2, Axis};
 
-const bin_w: f64 = 1.;
+const BIN_W: f64 = 1.;
 
 fn add_density(density: &mut Array2<f64>, x: usize, y: usize, added_density: f64) {
     density[[x, y]] += added_density;
@@ -26,10 +26,10 @@ pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
         let lower_edge_bin = lower_edge.floor();
 
         let right_width = right_edge - right_edge_bin;
-        let left_width = (left_edge_bin + bin_w) - left_edge;
+        let left_width = (left_edge_bin + BIN_W) - left_edge;
 
         let upper_height = upper_edge - upper_edge_bin;
-        let lower_height = (lower_edge_bin + bin_w) - lower_edge;
+        let lower_height = (lower_edge_bin + BIN_W) - lower_edge;
 
         //update the upper right corner
         add_density(

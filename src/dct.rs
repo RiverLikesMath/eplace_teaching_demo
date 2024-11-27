@@ -1,3 +1,6 @@
+
+
+
 use crate::util::calc_w;
 use ndarray::Array2;
 use ndrustfft::{nddct2, nddct3, DctHandler, Normalization};
@@ -51,7 +54,7 @@ fn elec_coeff_x(u: usize, v: usize, m: usize) -> f64 {
 
     let mut elec_coeff = 0.;
 
-    if (u != 0 && v != 0) {
+    if u != 0 && v != 0 {
         elec_coeff = w_u * potential_coeff(w_u, w_v)
     }
     elec_coeff

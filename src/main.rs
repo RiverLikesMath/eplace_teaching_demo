@@ -1,4 +1,4 @@
-use ndarray::{array, Array1, Array2};
+use ndarray::array;
 
 //use ndrustfft::{ndfft_r2c, Complex, R2cFftHandler};
 
@@ -13,6 +13,7 @@ mod wl_grad;
 ///smoothing.
 ///for simplicities sake, we'll assume all the elements are on a single global net. this is very
 ///silly, but it'll make the demonstration a bit easier
+#[allow(unused_variables)] //we're allowing unused variables in main here, at least for now. 
 fn main() {
     let cell_centers = array![
         [28. / 8., 28. / 8.], //x,y, initial placement
