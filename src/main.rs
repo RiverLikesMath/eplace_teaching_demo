@@ -66,13 +66,11 @@ fn main() {
     //we'll also need the electric field, which requires some cosine/sine transforms of the density matrix
 
     let lambda_0_upper = wl_gradient.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
-    //   let charges = array![2.25, 2.25, 2.25, 2.25];
+    let charges = array![2.25, 2.25, 2.25, 2.25];
 
     let coeffs = dct::calc_coeffs(&density, m);
     dct::check_density(&coeffs, &density, m);
 
     let slow_elec_x = ref_dct::ref_elec_field_x(&coeffs, m);
     dct::test_elec_field_x(&coeffs, &slow_elec_x, m);
-
-
 }
