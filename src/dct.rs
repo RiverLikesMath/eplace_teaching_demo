@@ -120,6 +120,27 @@ pub fn elec_field_x(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
 }
 
 ///this code is similar to elec_field_x, but writing it out to make it clear. equation 24, second half)
+pub fn elec_field_y(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
+    let mut planner = DctPlanner::new();
+    let mut elec_y = Array2::<f64>::zeros((m, m));
+    for u in 0..m {
+        for v in 0..m {
+            elec_y[[u, v]] = coeffs[[u, v]] * elec_coeff(u, v, m, Direction::Y);
+        }
+    }
+
+    //inverse sin transform on each row
+    for mut row in elec_y.rows_mut() {
+        fft_row_or_col(&mut row, &mut planner, SorC::Sin, m);
+    }
+
+    // inverse cos transform on each column
+    for mut col in elec_y.columns_mut() {
+        fft_row_or_col(&mut col, &mut planner, SorC::Cos, m);
+    }
+
+    elec_y
+}
 
 pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
     let fast_elec_x = elec_field_x(&coeffs, m);

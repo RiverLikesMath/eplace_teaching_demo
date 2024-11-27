@@ -77,4 +77,6 @@ fn main() {
 
     let slow_elec_x = ref_dct::ref_elec_field_x(&coeffs, m);
     dct::test_elec_field_x(&coeffs, &slow_elec_x, m);
+
+    let elec_field_y = dct::elec_field_y(&coeffs, m);
 }
