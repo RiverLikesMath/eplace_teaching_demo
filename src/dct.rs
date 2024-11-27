@@ -1,10 +1,17 @@
-
-
-
 use crate::util::calc_w;
-use ndarray::Array2;
+use ndarray::{Array, Array2, ArrayBase, Ix1, ViewRepr};
 use ndrustfft::{nddct2, nddct3, DctHandler, Normalization};
 use rustdct::DctPlanner;
+
+enum Direction {
+    X,
+    Y,
+}
+
+enum SorC {
+    Sin,
+    Cos,
+}
 
 ///calculate the a_u_vs from eq ( ) using an fft library
 pub fn calc_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
@@ -48,60 +55,75 @@ fn potential_coeff(w_u: f64, w_v: f64) -> f64 {
         1. / (w_u.powi(2) + w_v.powi(2))
     }
 }
-fn elec_coeff_x(u: usize, v: usize, m: usize) -> f64 {
+
+fn elec_coeff(u: usize, v: usize, m: usize, dir: Direction) -> f64 {
     let w_u = calc_w(u, m);
     let w_v = calc_w(v, m);
 
     let mut elec_coeff = 0.;
 
     if u != 0 && v != 0 {
-        elec_coeff = w_u * potential_coeff(w_u, w_v)
+        match dir {
+            Direction::X => elec_coeff = w_u * potential_coeff(w_u, w_v),
+            Direction::Y => elec_coeff = w_v * potential_coeff(w_u, w_v),
+        }
     }
     elec_coeff
+}
+
+fn fft_row_or_col(
+    row_col: &mut ArrayBase<ViewRepr<&mut f64>, Ix1>,
+    planner: &mut DctPlanner<f64>,
+    transform: SorC,
+    m: usize,
+) {
+    let fft;
+
+    match transform {
+        SorC::Sin => fft = planner.plan_dst3(m),
+        SorC::Cos => fft = planner.plan_dct3(m),
+    }
+
+    let mut buffer = row_col.to_vec();
+
+    match transform {
+        SorC::Sin => fft.process_dst3(&mut buffer),
+        SorC::Cos => fft.process_dct3(&mut buffer),
+    }
+
+    let temp = Array::from_vec(buffer);
+    row_col.assign(&temp);
 }
 
 pub fn elec_field_x(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut elec_x = Array2::<f64>::zeros((m, m));
 
-    let mut elec_coeffs = Array2::<f64>::zeros((m, m));
+    let mut planner = DctPlanner::new();
 
     for u in 0..m {
         for v in 0..m {
-            elec_coeffs[[u, v]] = coeffs[[u, v]] * elec_coeff_x(u, v, m);
-        }
-    }
-    let mut planner = DctPlanner::new();
-    let dct = planner.plan_dct3(m);
-    let dst = planner.plan_dst3(m);
-
-    let mut post_cos = Array2::<f64>::zeros((m, m));
-
-    //cos on each row
-    for row in 0..m {
-        let mut buffer = elec_coeffs.row(row).to_vec();
-        dct.process_dct3(&mut buffer);
-        for col in 0..m {
-            if row == 0 {
-                post_cos[[row, col]] = 0.;
-            } else {
-                post_cos[[row, col]] = buffer[col];
-            }
+            elec_x[[u, v]] = coeffs[[u, v]] * elec_coeff(u, v, m, Direction::X);
         }
     }
 
-    //sin on each column
-    for col in 0..m {
-        let mut buffer2 = post_cos.column(col).to_vec();
-        dst.process_dst3(&mut buffer2);
-
-        for row in 0..m {
-            elec_x[[row, col]] = buffer2[row];
-        }
+    //inverse cos transform on each row
+    for mut row in elec_x.rows_mut() {
+        fft_row_or_col(&mut row, &mut planner, SorC::Cos, m);
     }
+
+    // inverse sin transform on each column
+    for mut col in elec_x.columns_mut() {
+        fft_row_or_col(&mut col, &mut planner, SorC::Sin, m);
+    }
+
     elec_x
 }
+
+///this code is similar to elec_field_x, but writing it out to make it clear. equation 24, second half)
+
 pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
     let fast_elec_x = elec_field_x(&coeffs, m);
+
     let row = 7;
 
     let diff = &good.row(row) - &fast_elec_x.row(row);
@@ -113,7 +135,7 @@ pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
     println!("{:.4}", div);
 }
 
-/* 
+/*
 keeping this just as an example of how to use rustdct
 pub fn new_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut coeffs = Array2::<f64>::zeros((m, m));

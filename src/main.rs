@@ -13,7 +13,7 @@ mod wl_grad;
 ///smoothing.
 ///for simplicities sake, we'll assume all the elements are on a single global net. this is very
 ///silly, but it'll make the demonstration a bit easier
-#[allow(unused_variables)] //we're allowing unused variables in main here, at least for now. 
+#[allow(unused_variables)] //we're allowing unused variables in main here, at least for now.
 fn main() {
     let cell_centers = array![
         [28. / 8., 28. / 8.], //x,y, initial placement
@@ -70,6 +70,9 @@ fn main() {
     let charges = array![2.25, 2.25, 2.25, 2.25];
 
     let coeffs = dct::calc_coeffs(&density, m);
+    let elec_field_x = dct::elec_field_x(&coeffs, m);
+    // let elec_field_y = dct::elec_field_y(&coeffs, m);
+
     dct::check_density(&coeffs, &density, m);
 
     let slow_elec_x = ref_dct::ref_elec_field_x(&coeffs, m);
