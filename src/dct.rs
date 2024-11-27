@@ -38,34 +38,6 @@ pub fn check_density(coeffs: &Array2<f64>, density: &Array2<f64>, m: usize) {
     println!("{:.4}", &test_density_div);
 }
 
-pub fn new_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
-    let mut coeffs = Array2::<f64>::zeros((m, m));
-
-    let mut planner = DctPlanner::new();
-    let dct2 = planner.plan_dct2(m);
-
-    //run a cosine transform on each row
-    for row in 0..m {
-        let mut buffer = density.row(row).to_vec();
-        dct2.process_dct2(&mut buffer);
-        for col in 0..m {
-            coeffs[[row, col]] = buffer[col];
-        }
-    }
-
-    //run another cosine transform on the columns that result
-    for col in 0..m {
-        let mut buffer = coeffs.column(col).to_vec();
-        dct2.process_dct2(&mut buffer);
-        for row in 0..m {
-            coeffs[[row, col]] = buffer[row];
-        }
-    }
-    coeffs.mapv_inplace(|x| x / (m as f64).powi(2)); //divide by m^2
-
-    coeffs
-}
-
 fn potential_coeff(w_u: f64, w_v: f64) -> f64 {
     if w_u == 0. && w_v == 0. {
         0.
@@ -84,6 +56,7 @@ fn elec_coeff_x(u: usize, v: usize, m: usize) -> f64 {
     }
     elec_coeff
 }
+
 pub fn elec_field_x(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut elec_x = Array2::<f64>::zeros((m, m));
 
@@ -136,3 +109,34 @@ pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
     println!("x electr field, ration of ref and fft");
     println!("{:.4}", div);
 }
+
+/* 
+keeping this just as an example of how to use rustdct
+pub fn new_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
+    let mut coeffs = Array2::<f64>::zeros((m, m));
+
+    let mut planner = DctPlanner::new();
+    let dct2 = planner.plan_dct2(m);
+
+    //run a cosine transform on each row
+    for row in 0..m {
+        let mut buffer = density.row(row).to_vec();
+        dct2.process_dct2(&mut buffer);
+        for col in 0..m {
+            coeffs[[row, col]] = buffer[col];
+        }
+    }
+
+    //run another cosine transform on the columns that result
+    for col in 0..m {
+        let mut buffer = coeffs.column(col).to_vec();
+        dct2.process_dct2(&mut buffer);
+        for row in 0..m {
+            coeffs[[row, col]] = buffer[row];
+        }
+    }
+    coeffs.mapv_inplace(|x| x / (m as f64).powi(2)); //divide by m^2
+
+    coeffs
+}
+*/
