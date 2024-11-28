@@ -82,9 +82,7 @@ fn main() {
     // the denominator of equation 35 is depends on the electric field, so we'll use our elec_field_x's and
     //our elec_field_y's to get the electric field for each cell. We do this by multipyling the overlap of 
     // of the cell with each bin with the corresponding electric field in the given direction in a bin
-
-    // the key line from the called functions is  
-    //elec_field += cell_overlap * bins_elec_field[[u, v]];
+    // the key line from the called functions is  lec_field += cell_overlap * bins_elec_field[[u, v]];
 
     let cell_fields_x = cell_centers
         .axis_iter(Axis(0))

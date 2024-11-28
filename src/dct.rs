@@ -134,9 +134,11 @@ pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m:
     let (cell_u, cell_v) = (cell_loc[0] as usize, cell_loc[1] as usize);
     let mut elec_field = 0.;
 
+    //these bounds should include all the surrounding bins and the bin containing the 
+    //cell center
     let (u_start, u_end, v_start, v_end) = bounds_check(cell_u, cell_v, m);
   
-
+    //is there a way to do this with better iterators or the like, make it prettier? 
     for u in u_start..u_end {
         for v in v_start..v_end {
             let cell_overlap = overlap(&cell_loc, u as f64, v as f64);
