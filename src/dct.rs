@@ -134,11 +134,25 @@ pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m:
     let (cell_u, cell_v) = (cell_loc[0] as usize, cell_loc[1] as usize);
     let mut elec_field = 0.;
 
+    let (u_start, u_end, v_start, v_end) = bounds_check(cell_u, cell_v, m);
+  
+
+    for u in u_start..u_end {
+        for v in v_start..v_end {
+            let cell_overlap = overlap(&cell_loc, u as f64, v as f64);
+            elec_field += cell_overlap * bins_elec_field[[u, v]];
+        }
+    }
+    elec_field
+}
+
+///helper function for elec_field_cell, should we create an enum for it? 
+fn bounds_check(cell_u: usize, cell_v: usize, m:usize) -> (usize,usize,usize,usize){
     let u_start;
+    let u_end; 
     let v_start;
+    let v_end; 
 
-
-    //this piece of ugliness multiplies the bin electric field by the overlap of the node in each surrounding bin
     if cell_u == 0 {
         u_start = 0
     } else {
@@ -149,9 +163,6 @@ pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m:
     } else {
         v_start = cell_v - 1
     };
-
-    let u_end;
-    let v_end;
     if cell_u == m - 1 {
         u_end = m
     } else {
@@ -162,12 +173,5 @@ pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m:
     } else {
         v_end = cell_u + 2
     };
-
-    for u in u_start..u_end {
-        for v in v_start..v_end {
-            let cell_overlap = overlap(&cell_loc, u as f64, v as f64);
-            elec_field += cell_overlap * bins_elec_field[[u, v]];
-        }
-    }
-    elec_field
+    (u_start, u_end, v_start, v_end)
 }
