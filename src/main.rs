@@ -1,7 +1,8 @@
-use ndarray::array;
+use ndarray::{array, Axis};
 
 //use ndrustfft::{ndfft_r2c, Complex, R2cFftHandler};
 
+mod bad_tests;
 mod dct;
 mod density;
 mod ref_dct;
@@ -24,15 +25,15 @@ fn main() {
         [1.27, 2.04],
         [14.81, 14.25],
         [14.22, 14.44],
-        [1.0, 1.0],
-        [2.0, 2.0],
+        [1.5, 1.5],
+        [1.9, 12.9],
         [3.0, 3.0],
         [4.0, 4.0],
         [5.0, 4.0],
         [6.0, 6.0],
         [5.5, 5.5],
         [4.75, 4.75],
-        [5.25, 5.25],
+        [5.25, 12.25],
     ];
 
     let m: usize = 16; // m == sqrt(number of bins), max 1024, must be power of 2
@@ -62,21 +63,64 @@ fn main() {
     //very well defined, and while it's related to the wirelength function it doesn't necessarily
     //depend on it.
 
-    let wl_gradient = wl_grad::calc_wl_grad(&cell_centers);
+    //wirelength gradient, the gradient of the wirelength estimator from equation 6
+    //going to be a 1d array of values, even values are x, odd values are y
+
+    let wl_gradient_0 = wl_grad::calc_wl_grad(&cell_centers);
 
     //we'll also need the electric field, which requires some cosine/sine transforms of the density matrix
 
-    let lambda_0_upper = wl_gradient.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
     let charges = array![2.25, 2.25, 2.25, 2.25];
 
     let coeffs = dct::calc_coeffs(&density, m);
+
+    //these functions calculation the electric field for each bin
     let elec_field_x = dct::elec_field_x(&coeffs, m);
-    // let elec_field_y = dct::elec_field_y(&coeffs, m);
-
-    dct::check_density(&coeffs, &density, m);
-
-    let slow_elec_x = ref_dct::ref_elec_field_x(&coeffs, m);
-    dct::test_elec_field_x(&coeffs, &slow_elec_x, m);
-
     let elec_field_y = dct::elec_field_y(&coeffs, m);
+
+   
+    // the denominator of equation 35 is depends on the electric field, so we'll use our elec_field_x's and
+    //our elec_field_y's to get the electric field for each cell. We do this by multipyling the overlap of 
+    // of the cell with each bin with the corresponding electric field in the given direction in a bin
+
+    // the key line from the called functions is  
+    //elec_field += cell_overlap * bins_elec_field[[u, v]];
+
+    let cell_fields_x = cell_centers
+        .axis_iter(Axis(0))
+        .to_owned()
+        .map(|x| dct::elec_field_cell(&x.to_owned(), &elec_field_x, m));
+    let cell_fields_y = cell_centers
+        .axis_iter(Axis(0))
+        .to_owned()
+        .map(|x| dct::elec_field_cell(&x.to_owned(), &elec_field_y, m));
+
+    //the numerator of equation 35 is the absolute values of the x and y components of each gradient,
+    //all summmed together
+    let lambda_0_upper = wl_gradient_0.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
+
+    //the denominator is equal to the absolute value of each component of the electric field times the charge of the cell (fixed at 1.5*1.5=2.25, here, since that's our area)
+    let lambda_lower_x = cell_fields_x.fold(0., |acc, x| acc + 2.25 * x.abs());
+    let lambda_lower_y = cell_fields_y.fold(0., |acc, y| acc + 2.25 * y.abs());
+
+    let lambda_0_lower = lambda_lower_x + lambda_lower_y;
+    let lambda_0 = lambda_0_upper / lambda_0_lower;
+
+    dbg!(
+        lambda_lower_x,
+        lambda_lower_y,
+        lambda_0_lower,
+        lambda_0_upper,
+        lambda_0
+    );
+
+    //inital alpha_0^max from the eplace algorithm (alg 3) on page 24 is 0.044 * bin width, so we'll
+    //just set it to 0.044
+
+    let alpha_0 = 0.044 * 1.;
+
+    for k in 0..10 {
+        //ePlace();
+    }
+    
 }

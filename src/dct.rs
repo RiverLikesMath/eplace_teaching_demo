@@ -1,6 +1,6 @@
-use crate::util::calc_w;
-use ndarray::{Array, Array2, ArrayBase, Ix1, ViewRepr};
-use ndrustfft::{nddct2, nddct3, DctHandler, Normalization};
+use crate::util::{calc_w, overlap};
+use ndarray::{Array, Array1, Array2, ArrayBase, Ix1, ViewRepr};
+use ndrustfft::{nddct2, DctHandler, Normalization};
 use rustdct::DctPlanner;
 
 enum Direction {
@@ -29,23 +29,6 @@ pub fn calc_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
     coeffs.mapv_inplace(|x| x / ((m as f64).powi(2)));
 
     coeffs
-}
-
-pub fn check_density(coeffs: &Array2<f64>, density: &Array2<f64>, m: usize) {
-    let handler: DctHandler<f64> = DctHandler::new(m); //.normalization(Normalization::None);
-    let mut first_pass = Array2::<f64>::zeros((m, m));
-    let mut density_dct = Array2::<f64>::zeros((m, m));
-
-    nddct3(&coeffs, &mut first_pass, &handler, 0);
-    nddct3(&first_pass, &mut density_dct, &handler, 1);
-
-    let test_density = &density.row(0) - &density_dct.row(0);
-    let test_density_div = &density.row(0) / &density_dct.row(0);
-
-    println!("------check density stuff");
-    println!("test density diff then div");
-    println!("{:.4}", &test_density);
-    println!("{:.4}", &test_density_div);
 }
 
 fn potential_coeff(w_u: f64, w_v: f64) -> f64 {
@@ -96,6 +79,7 @@ fn fft_row_or_col(
 }
 
 pub fn elec_field_x(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
+    //this will calculate the electric field in the x direction for each bin
     let mut elec_x = Array2::<f64>::zeros((m, m));
 
     let mut planner = DctPlanner::new();
@@ -138,51 +122,52 @@ pub fn elec_field_y(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
     for mut col in elec_y.columns_mut() {
         fft_row_or_col(&mut col, &mut planner, SorC::Cos, m);
     }
-
     elec_y
 }
 
-pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
-    let fast_elec_x = elec_field_x(&coeffs, m);
+// returns the electric field in a given direction for a cell. Expects an Array1 (may switch to tuple?)
+// with the x and y coordinates of the cell. Has to take into account the overlap with all of the bins the cell
+// is in. In eplace proper that'd include the stretching dsecribed in (page #), but al of our cells are larger
+//than a bin so there's no stretching. Note we *could* use types to enforce that cell_loc is a 1d array of length
+//2, we won't for now
+pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m: usize) -> f64 {
+    let (cell_u, cell_v) = (cell_loc[0] as usize, cell_loc[1] as usize);
+    let mut elec_field = 0.;
 
-    let row = 7;
+    let u_start;
+    let v_start;
 
-    let diff = &good.row(row) - &fast_elec_x.row(row);
-    let div = &good.row(row) / &fast_elec_x.row(row);
 
-    println!("x electric field, difference ref from fft");
-    println!("{:.4}", diff);
-    println!("x electr field, ration of ref and fft");
-    println!("{:.4}", div);
-}
+    //this piece of ugliness multiplies the bin electric field by the overlap of the node in each surrounding bin
+    if cell_u == 0 {
+        u_start = 0
+    } else {
+        u_start = cell_u - 1
+    };
+    if cell_v == 0 {
+        v_start = 0
+    } else {
+        v_start = cell_v - 1
+    };
 
-/*
-keeping this just as an example of how to use rustdct
-pub fn new_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
-    let mut coeffs = Array2::<f64>::zeros((m, m));
+    let u_end;
+    let v_end;
+    if cell_u == m - 1 {
+        u_end = m
+    } else {
+        u_end = cell_u + 2
+    };
+    if cell_v == m - 1 {
+        v_end = m
+    } else {
+        v_end = cell_u + 2
+    };
 
-    let mut planner = DctPlanner::new();
-    let dct2 = planner.plan_dct2(m);
-
-    //run a cosine transform on each row
-    for row in 0..m {
-        let mut buffer = density.row(row).to_vec();
-        dct2.process_dct2(&mut buffer);
-        for col in 0..m {
-            coeffs[[row, col]] = buffer[col];
+    for u in u_start..u_end {
+        for v in v_start..v_end {
+            let cell_overlap = overlap(&cell_loc, u as f64, v as f64);
+            elec_field += cell_overlap * bins_elec_field[[u, v]];
         }
     }
-
-    //run another cosine transform on the columns that result
-    for col in 0..m {
-        let mut buffer = coeffs.column(col).to_vec();
-        dct2.process_dct2(&mut buffer);
-        for row in 0..m {
-            coeffs[[row, col]] = buffer[row];
-        }
-    }
-    coeffs.mapv_inplace(|x| x / (m as f64).powi(2)); //divide by m^2
-
-    coeffs
+    elec_field
 }
-*/
