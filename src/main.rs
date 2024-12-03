@@ -57,8 +57,8 @@ fn main() {
     //all the gradients. Remember that wirelength is a scalar function: you give it the placement
     //vector / list of cell centers and then it gives you a single number.
     //
-    //However, the gradient of the wirelength will be a an array with 8 elements -> partial x and
-    //partial y for each of our four logic elements. The really interesting thing is that we may
+    //However, the gradient of the wirelength will be a an array with cell count *2 
+    //  elements -> partial x and partial y for each of our logic elements. The really interesting thing is that we may
     //not need the wirelength estimation in order to calculate its gradient. The gradient formula is
     //very well defined, and while it's related to the wirelength function it doesn't necessarily
     //depend on it.
@@ -114,9 +114,10 @@ fn main() {
 
     //inital alpha_0^max from the eplace algorithm (alg 3) on page 24 is 0.044 * bin width, so we'll
     //just set it to 0.044
-
     let alpha_0 = 0.044 * 1.;
 
+    //we still have to initialize some other parameters, but once we do: 
+    //an interesting note 
     for k in 0..10 {
         //ePlace();
     }

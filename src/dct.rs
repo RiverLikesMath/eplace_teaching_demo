@@ -3,6 +3,23 @@ use ndarray::{Array, Array1, Array2, ArrayBase, Ix1, ViewRepr};
 use ndrustfft::{nddct2, DctHandler, Normalization};
 use rustdct::DctPlanner;
 
+pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m: usize) -> f64 {
+    let (cell_u, cell_v) = (cell_loc[0] as usize, cell_loc[1] as usize);
+    let mut elec_field = 0.;
+
+    //these bounds should include all the surrounding bins and the bin containing the
+    //cell center
+    let (u_start, u_end, v_start, v_end) = bounds_check(cell_u, cell_v, m);
+
+    //is there a way to do this with better iterators or the like, make it prettier?
+    for u in u_start..u_end {
+        for v in v_start..v_end {
+            let cell_overlap = overlap(&cell_loc, u as f64, v as f64);
+            elec_field += cell_overlap * bins_elec_field[[u, v]];
+        }
+    }
+    elec_field
+}
 enum Direction {
     X,
     Y,
@@ -130,30 +147,13 @@ pub fn elec_field_y(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
 // is in. In eplace proper that'd include the stretching dsecribed in (page #), but al of our cells are larger
 //than a bin so there's no stretching. Note we *could* use types to enforce that cell_loc is a 1d array of length
 //2, we won't for now
-pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m: usize) -> f64 {
-    let (cell_u, cell_v) = (cell_loc[0] as usize, cell_loc[1] as usize);
-    let mut elec_field = 0.;
 
-    //these bounds should include all the surrounding bins and the bin containing the 
-    //cell center
-    let (u_start, u_end, v_start, v_end) = bounds_check(cell_u, cell_v, m);
-  
-    //is there a way to do this with better iterators or the like, make it prettier? 
-    for u in u_start..u_end {
-        for v in v_start..v_end {
-            let cell_overlap = overlap(&cell_loc, u as f64, v as f64);
-            elec_field += cell_overlap * bins_elec_field[[u, v]];
-        }
-    }
-    elec_field
-}
-
-///helper function for elec_field_cell, should we create an enum for it? 
-fn bounds_check(cell_u: usize, cell_v: usize, m:usize) -> (usize,usize,usize,usize){
+///helper function for elec_field_cell, should we create an enum for it?
+fn bounds_check(cell_u: usize, cell_v: usize, m: usize) -> (usize, usize, usize, usize) {
     let u_start;
-    let u_end; 
+    let u_end;
     let v_start;
-    let v_end; 
+    let v_end;
 
     if cell_u == 0 {
         u_start = 0
