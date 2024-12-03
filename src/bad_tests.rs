@@ -17,8 +17,8 @@ pub fn check_density(coeffs: &Array2<f64>, density: &Array2<f64>, m: usize) {
 
     println!("------check density stuff");
     println!("test density diff then div");
-    println!("{:.4}", &test_density);
-    println!("{:.4}", &test_density_div);
+    println!("{test_density:.4}");
+    println!("{test_density_div:.4}");
 }
 
 pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
@@ -30,7 +30,7 @@ pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
     let div = &good.row(row) / &fast_elec_x.row(row);
 
     println!("x electric field, difference ref from fft");
-    println!("{:.4}", diff);
+    println!("{diff:.4}");
     println!("x electr field, ration of ref and fft");
-    println!("{:.4}", div);
+    println!("{div:.4}");
 }

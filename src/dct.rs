@@ -5,21 +5,23 @@ use rustdct::DctPlanner;
 
 pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m: usize) -> f64 {
     let (cell_u, cell_v) = (cell_loc[0] as usize, cell_loc[1] as usize);
-    let mut elec_field = 0.;
 
     //these bounds should include all the surrounding bins and the bin containing the
     //cell center
     let (u_start, u_end, v_start, v_end) = bounds_check(cell_u, cell_v, m);
 
     //is there a way to do this with better iterators or the like, make it prettier?
-    for u in u_start..u_end {
-        for v in v_start..v_end {
-            let cell_overlap = overlap(cell_loc, u as f64, v as f64);
-            elec_field += cell_overlap * bins_elec_field[[u, v]];
-        }
-    }
-    elec_field
+    
+    // well, if you insist.
+    (u_start..u_end)
+    .flat_map(|u|
+        (v_start..v_end)
+        .map(move |v| overlap(cell_loc, u as f64, v as f64) * bins_elec_field[[u, v]])
+    )
+    .sum::<f64>()
 }
+
+#[derive(Clone, Copy)]
 enum Direction {
     X,
     Y,
@@ -50,25 +52,24 @@ pub fn calc_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
 
 fn potential_coeff(w_u: f64, w_v: f64) -> f64 {
     if w_u == 0. && w_v == 0. {
-        0.
-    } else {
-        1. / (w_u.powi(2) + w_v.powi(2))
+        return 0.;
     }
+
+    1. / (w_u.powi(2) + w_v.powi(2))
 }
 
 fn elec_coeff(u: usize, v: usize, m: usize, dir: Direction) -> f64 {
     let w_u = calc_w(u, m);
     let w_v = calc_w(v, m);
 
-    let mut elec_coeff = 0.;
-
-    if u != 0 && v != 0 {
-        match dir {
-            Direction::X => elec_coeff = w_u * potential_coeff(w_u, w_v),
-            Direction::Y => elec_coeff = w_v * potential_coeff(w_u, w_v),
-        }
+    if u == 0 && v == 0 {
+        return 0.;
     }
-    elec_coeff
+
+    match dir {
+        Direction::X => w_u * potential_coeff(w_u, w_v),
+        Direction::Y => w_v * potential_coeff(w_u, w_v),
+    }
 }
 
 fn fft_row_or_col(
@@ -77,20 +78,14 @@ fn fft_row_or_col(
     transform: SorC,
     m: usize,
 ) {
-    let fft = match transform {
-        SorC::Sin => planner.plan_dst3(m),
-        SorC::Cos => planner.plan_dct3(m),
-    };
-
     let mut buffer = row_col.to_vec();
 
     match transform {
-        SorC::Sin => fft.process_dst3(&mut buffer),
-        SorC::Cos => fft.process_dct3(&mut buffer),
+        SorC::Sin => planner.plan_dst3(m).process_dst3(&mut buffer),
+        SorC::Cos => planner.plan_dct3(m).process_dct3(&mut buffer),
     }
 
-    let temp = Array::from_vec(buffer);
-    row_col.assign(&temp);
+    row_col.assign(&Array::from_vec(buffer));
 }
 
 pub fn elec_field_x(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
@@ -166,7 +161,7 @@ fn bounds_check(cell_u: usize, cell_v: usize, m: usize) -> (usize, usize, usize,
     let v_end = if cell_v == m - 1 {
         m
     } else {
-        cell_u + 2
+        cell_v + 2
     };
     (u_start, u_end, v_start, v_end)
 }

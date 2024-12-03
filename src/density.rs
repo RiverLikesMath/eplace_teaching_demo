@@ -20,63 +20,63 @@ pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
         let upper_edge = cell_centers[[cell, 1]] + 0.75;
         let lower_edge = cell_centers[[cell, 1]] - 0.75;
 
-        let left_edge_bin = left_edge.floor();
-        let right_edge_bin = right_edge.floor();
-        let upper_edge_bin = upper_edge.floor();
-        let lower_edge_bin = lower_edge.floor();
+        let left_edge_bin = left_edge.floor() as usize;
+        let right_edge_bin = right_edge.floor() as usize;
+        let upper_edge_bin = upper_edge.floor() as usize;
+        let lower_edge_bin = lower_edge.floor() as usize;
 
-        let right_width = right_edge - right_edge_bin;
-        let left_width = (left_edge_bin + BIN_W) - left_edge;
+        let right_width = right_edge.fract();
+        let left_width = (left_edge.floor() + BIN_W) - left_edge;
 
-        let upper_height = upper_edge - upper_edge_bin;
-        let lower_height = (lower_edge_bin + BIN_W) - lower_edge;
+        let upper_height = upper_edge.fract();
+        let lower_height = (lower_edge.floor() + BIN_W) - lower_edge;
 
         //update the upper right corner
         add_density(
             &mut density,
-            right_edge_bin as usize,
-            upper_edge_bin as usize,
+            right_edge_bin,
+            upper_edge_bin,
             right_width * upper_height,
         );
         //update the lower right corner
         add_density(
             &mut density,
-            right_edge_bin as usize,
-            lower_edge_bin as usize,
+            right_edge_bin,
+            lower_edge_bin,
             right_width * lower_height,
         );
         //update the lower left corner
         add_density(
             &mut density,
-            left_edge_bin as usize,
-            lower_edge_bin as usize,
+            left_edge_bin,
+            lower_edge_bin,
             left_width * lower_height,
         );
         //update the upper left corner
         add_density(
             &mut density,
-            left_edge_bin as usize,
-            upper_edge_bin as usize,
+            left_edge_bin,
+            upper_edge_bin,
             left_width * upper_height,
         );
 
-        for y in ((lower_edge_bin + 1.) as usize)..(upper_edge_bin as usize) {
+        for y in (lower_edge_bin + 1)..upper_edge_bin {
             //now for the left edges that aren't corners
-            add_density(&mut density, left_edge_bin as usize, y, left_width); //height of a bin is 1
+            add_density(&mut density, left_edge_bin, y, left_width); //height of a bin is 1
                                                                               //right edges
-            add_density(&mut density, right_edge_bin as usize, y, right_width);
+            add_density(&mut density, right_edge_bin, y, right_width);
         }
 
-        for x in ((left_edge_bin + 1.) as usize)..(right_edge_bin as usize) {
+        for x in (left_edge_bin + 1)..right_edge_bin {
             //now for the upper edges that aren't corners
-            add_density(&mut density, x, upper_edge_bin as usize, upper_height); //width of a bin is 1
+            add_density(&mut density, x, upper_edge_bin, upper_height); //width of a bin is 1
                                                                                  //lower edges
-            add_density(&mut density, x, lower_edge_bin as usize, lower_height);
+            add_density(&mut density, x, lower_edge_bin, lower_height);
         }
 
         //add density of completely filled bins
-        for x in ((left_edge_bin + 1.) as usize)..(right_edge_bin as usize) {
-            for y in ((lower_edge_bin + 1.) as usize)..(upper_edge_bin as usize) {
+        for x in (left_edge_bin + 1)..right_edge_bin {
+            for y in (lower_edge_bin + 1)..upper_edge_bin {
                 add_density(&mut density, x, y, 1.);
             }
         }
@@ -86,6 +86,5 @@ pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
     let dc_component = density.sum() / (m as f64).powi(2);
     let dc_array = Array::from_elem((m, m), dc_component);
     
-
-    &density - &dc_array
+    density - dc_array
 }

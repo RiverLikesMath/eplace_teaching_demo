@@ -72,11 +72,8 @@ fn calc_elec_point(coefficients: &Array2<f64>, m: usize, x: usize, y: usize) -> 
             let w_u = calc_w(u, m);
             let w_v = calc_w(v, m);
 
-            if u == 0 && v == 0
-            //formula as written has a divide by zero here
-            {
-                field_x_at_point += 0.;
-            } else {
+            //formula as written has a divide by zero at (0, 0)
+            if u != 0 && v != 0 {
                 let elec_x_coeff = coefficients[[u, v]] * w_u / (w_u.powi(2) + w_v.powi(2));
 
                 let w_ux = w_u * (x as f64); //w_u * x
