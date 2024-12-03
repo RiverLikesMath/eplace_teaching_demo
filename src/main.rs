@@ -72,6 +72,7 @@ fn main() {
 
     let charges = array![2.25, 2.25, 2.25, 2.25];
 
+    //mxm matrix of a_uvs, calculated via 2D DCT, but ultimately coming from eq 21)
     let coeffs = dct::calc_coeffs(&density, m);
 
     //these functions calculation the electric field for each bin
@@ -88,6 +89,7 @@ fn main() {
         .axis_iter(Axis(0))
         .to_owned()
         .map(|x| dct::elec_field_cell(&x.to_owned(), &elec_field_x, m));
+    
     let cell_fields_y = cell_centers
         .axis_iter(Axis(0))
         .to_owned()
@@ -102,6 +104,7 @@ fn main() {
     let lambda_lower_y = cell_fields_y.fold(0., |acc, y| acc + 2.25 * y.abs());
 
     let lambda_0_lower = lambda_lower_x + lambda_lower_y;
+    
     let lambda_0 = lambda_0_upper / lambda_0_lower;
 
     dbg!(
