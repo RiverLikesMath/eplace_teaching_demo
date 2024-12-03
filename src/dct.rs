@@ -77,12 +77,10 @@ fn fft_row_or_col(
     transform: SorC,
     m: usize,
 ) {
-    let fft;
-
-    match transform {
-        SorC::Sin => fft = planner.plan_dst3(m),
-        SorC::Cos => fft = planner.plan_dct3(m),
-    }
+    let fft = match transform {
+        SorC::Sin => planner.plan_dst3(m),
+        SorC::Cos => planner.plan_dct3(m),
+    };
 
     let mut buffer = row_col.to_vec();
 
@@ -150,30 +148,25 @@ pub fn elec_field_y(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
 
 ///helper function for elec_field_cell, should we create an enum for it?
 fn bounds_check(cell_u: usize, cell_v: usize, m: usize) -> (usize, usize, usize, usize) {
-    let u_start;
-    let u_end;
-    let v_start;
-    let v_end;
-
-    if cell_u == 0 {
-        u_start = 0
+    let u_start = if cell_u == 0 {
+        0
     } else {
-        u_start = cell_u - 1
+        cell_u - 1
     };
-    if cell_v == 0 {
-        v_start = 0
+    let v_start = if cell_v == 0 {
+        0
     } else {
-        v_start = cell_v - 1
+        cell_v - 1
     };
-    if cell_u == m - 1 {
-        u_end = m
+    let u_end = if cell_u == m - 1 {
+        m
     } else {
-        u_end = cell_u + 2
+        cell_u + 2
     };
-    if cell_v == m - 1 {
-        v_end = m
+    let v_end = if cell_v == m - 1 {
+        m
     } else {
-        v_end = cell_u + 2
+        cell_u + 2
     };
     (u_start, u_end, v_start, v_end)
 }
