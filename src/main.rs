@@ -87,21 +87,21 @@ fn main() {
 
     let cell_fields_x = cell_centers
         .axis_iter(Axis(0))
-        .to_owned()
+        .clone()
         .map(|x| dct::elec_field_cell(&x.to_owned(), &elec_field_x, m));
     
     let cell_fields_y = cell_centers
         .axis_iter(Axis(0))
-        .to_owned()
+        .clone()
         .map(|x| dct::elec_field_cell(&x.to_owned(), &elec_field_y, m));
 
     //the numerator of equation 35 is the absolute values of the x and y components of each gradient,
     //all summmed together
-    let lambda_0_upper = wl_gradient_0.map(|partialdiv| partialdiv.abs()).sum(); //from eq 35
+    let lambda_0_upper = wl_gradient_0.into_iter().map(f64::abs).sum::<f64>(); //from eq 35
 
     //the denominator is equal to the absolute value of each component of the electric field times the charge of the cell (fixed at 1.5*1.5=2.25, here, since that's our area)
-    let lambda_lower_x = cell_fields_x.fold(0., |acc, x| acc + 2.25 * x.abs());
-    let lambda_lower_y = cell_fields_y.fold(0., |acc, y| acc + 2.25 * y.abs());
+    let lambda_lower_x = cell_fields_x.map(|x| 2.25 * x.abs()).sum::<f64>();
+    let lambda_lower_y = cell_fields_y.map(|y| 2.25 * y.abs()).sum::<f64>();
 
     let lambda_0_lower = lambda_lower_x + lambda_lower_y;
     

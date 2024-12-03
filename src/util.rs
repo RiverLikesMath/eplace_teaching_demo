@@ -18,10 +18,10 @@ pub fn overlap(cell_loc: &Array1<f64>, u: f64, v: f64) -> f64 {
     let mut y_overlap = upper_edge.max(v + 1.) - lower_edge.max(v);
 
     if x_overlap < 0. {
-        x_overlap = 0.
+        x_overlap = 0.;
     };
     if y_overlap < 0. {
-        y_overlap = 0.
+        y_overlap = 0.;
     };
 
     x_overlap * y_overlap
