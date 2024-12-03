@@ -9,7 +9,7 @@ pub fn check_density(coeffs: &Array2<f64>, density: &Array2<f64>, m: usize) {
     let mut first_pass = Array2::<f64>::zeros((m, m));
     let mut density_dct = Array2::<f64>::zeros((m, m));
 
-    nddct3(&coeffs, &mut first_pass, &handler, 0);
+    nddct3(coeffs, &mut first_pass, &handler, 0);
     nddct3(&first_pass, &mut density_dct, &handler, 1);
 
     let test_density = &density.row(0) - &density_dct.row(0);
@@ -22,7 +22,7 @@ pub fn check_density(coeffs: &Array2<f64>, density: &Array2<f64>, m: usize) {
 }
 
 pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
-    let fast_elec_x = elec_field_x(&coeffs, m);
+    let fast_elec_x = elec_field_x(coeffs, m);
 
     let row = 7;
 
