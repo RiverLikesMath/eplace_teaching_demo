@@ -20,8 +20,8 @@ pub fn calc_wl_grad(cell_centers: &Array2<f64>) -> Array1<f64> {
         let y_i = cell_centers[[cell, 1]];
 
         let gamma = 0.2;
-        partials[cell * 2] = calc_wl_wa_partial(&all_x_i, x_i as f64, gamma);
-        partials[cell * 2 + 1] = calc_wl_wa_partial(&all_y_i, y_i as f64, gamma);
+        partials[cell * 2] = calc_wl_wa_partial(&all_x_i, x_i, gamma);
+        partials[cell * 2 + 1] = calc_wl_wa_partial(&all_y_i, y_i, gamma);
     }
     partials
 }
@@ -65,7 +65,7 @@ fn calc_wl_wa_partial(x_is: &ArrayView1<f64>, x_i: f64, gamma: f64) -> f64 {
 
     let sum_x_e_mxis = x_is.map(|x| (*x) * E.powf((*x) * -1. / gamma)).sum(); //sum x_i * e^(-x_i/gamma)
                                                                               //similar code to before
-    let sum_e_mxis = x_is.map(|x| E.powf((*x as f64) * (-1.0) / gamma)).sum(); //sum e^(-x_i/gamma)
+    let sum_e_mxis = x_is.map(|x| E.powf({ *x } * (-1.0) / gamma)).sum(); //sum e^(-x_i/gamma)
 
     //and again. maybe should rewrite!
     let e_mxi = E.powf((-1.0) * x_i / gamma); //e^(-x_i/gamma)

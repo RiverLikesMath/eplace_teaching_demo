@@ -43,8 +43,8 @@ pub fn ref_dct(coefficients: &Array2<f64>, m: usize, x: f64, y: f64) -> f64 {
     for u in 0..m {
         for v in 0..m {
             density_dct += coefficients[[u, v]]
-                * (calc_w(u, m) * (x as f64)).cos()
-                * (calc_w(v, m) * (y as f64)).cos();
+                * (calc_w(u, m) * x).cos()
+                * (calc_w(v, m) * y).cos();
         }
     }
 

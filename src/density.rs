@@ -85,7 +85,7 @@ pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
     //subtract the DC component (the total density / m^2 )
     let dc_component = density.sum() / (m as f64).powi(2);
     let dc_array = Array::from_elem((m, m), dc_component);
-    let zeroed_density = &density - &dc_array;
+    
 
-    zeroed_density
+    &density - &dc_array
 }

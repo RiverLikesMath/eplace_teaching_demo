@@ -14,7 +14,7 @@ pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m:
     //is there a way to do this with better iterators or the like, make it prettier?
     for u in u_start..u_end {
         for v in v_start..v_end {
-            let cell_overlap = overlap(&cell_loc, u as f64, v as f64);
+            let cell_overlap = overlap(cell_loc, u as f64, v as f64);
             elec_field += cell_overlap * bins_elec_field[[u, v]];
         }
     }
@@ -38,7 +38,7 @@ pub fn calc_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut coeffs = Array2::<f64>::zeros((m, m));
 
     //cosine transform on the rows
-    nddct2(&density, &mut first_pass, &handler, 0);
+    nddct2(density, &mut first_pass, &handler, 0);
 
     //cosine transform on the columns
     nddct2(&first_pass, &mut coeffs, &handler, 1);
