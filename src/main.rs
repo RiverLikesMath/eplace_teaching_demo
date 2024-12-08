@@ -123,6 +123,8 @@ fn main() {
     //an interesting note
     for k in 0..10 {
         let wl = wirelength::wl(&cell_centers, 0.2);
+        println!("estimated wirelength for the current iteration: ");
         dbg!(wl);
+
     }
 }

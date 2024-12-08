@@ -3,6 +3,19 @@ use ndarray::{Array, Array1, Array2, ArrayBase, Ix1, ViewRepr};
 use ndrustfft::{nddct2, DctHandler, Normalization};
 use rustdct::DctPlanner;
 
+#[derive(Clone, Copy)]
+enum Direction {
+    X,
+    Y,
+}
+
+enum SorC {
+    Sin,
+    Cos,
+}
+
+///calculate the electric field for a cell, given it's location (x,y) and the electric
+/// field for each bin in a given direction. 
 pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m: usize) -> f64 {
     let (cell_u, cell_v) = (cell_loc[0] as usize, cell_loc[1] as usize);
 
@@ -19,17 +32,6 @@ pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m:
                 .map(move |v| overlap(cell_loc, u as f64, v as f64) * bins_elec_field[[u, v]])
         })
         .sum::<f64>()
-}
-
-#[derive(Clone, Copy)]
-enum Direction {
-    X,
-    Y,
-}
-
-enum SorC {
-    Sin,
-    Cos,
 }
 
 ///calculate the a_u_vs from eq ( ) using an fft library
@@ -50,6 +52,7 @@ pub fn calc_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
     coeffs
 }
 
+///
 fn potential_coeff(w_u: f64, w_v: f64) -> f64 {
     if w_u == 0. && w_v == 0. {
         return 0.;
@@ -58,6 +61,8 @@ fn potential_coeff(w_u: f64, w_v: f64) -> f64 {
     1. / (w_u.powi(2) + w_v.powi(2))
 }
 
+///calculate the modifier to a given a_uv needed to calculate electric field in 
+/// a given direction 
 fn elec_coeff(u: usize, v: usize, m: usize, dir: Direction) -> f64 {
     let w_u = calc_w(u, m);
     let w_v = calc_w(v, m);
@@ -72,6 +77,7 @@ fn elec_coeff(u: usize, v: usize, m: usize, dir: Direction) -> f64 {
     }
 }
 
+///take an fft 
 fn fft_row_or_col(
     row_col: &mut ArrayBase<ViewRepr<&mut f64>, Ix1>,
     planner: &mut DctPlanner<f64>,
@@ -88,8 +94,9 @@ fn fft_row_or_col(
     row_col.assign(&Array::from_vec(buffer));
 }
 
+
+///    this will calculate the electric field in the x direction for each bin
 pub fn elec_field_x(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
-    //this will calculate the electric field in the x direction for each bin
     let mut elec_x = Array2::<f64>::zeros((m, m));
 
     let mut planner = DctPlanner::new();

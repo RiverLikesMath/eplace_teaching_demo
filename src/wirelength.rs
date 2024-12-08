@@ -21,10 +21,8 @@ fn wl_component(all_comp: ArrayView1<f64>, gamma: f64) -> f64 {
     //denominator of the left term
     let ll = all_comp.map(|x| (x / gamma).exp()).sum(); //sum e^(x/gamma)
 
-    //numerator of the right term
+    //now the right term
     let ur = all_comp.map(|x| x * (-x / gamma).exp()).sum(); //sum x*e^(-x/gamma)
-
-    //denominator of the right term
     let lr = all_comp.map(|x| (-x / gamma).exp()).sum(); //sum e^(-x/gamma)
 
     //the final expression is just the various components divided and subtracted
