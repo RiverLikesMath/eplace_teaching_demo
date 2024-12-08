@@ -11,14 +11,14 @@ pub fn elec_field_cell(cell_loc: &Array1<f64>, bins_elec_field: &Array2<f64>, m:
     let (u_start, u_end, v_start, v_end) = bounds_check(cell_u, cell_v, m);
 
     //is there a way to do this with better iterators or the like, make it prettier?
-    
+
     // well, if you insist.
     (u_start..u_end)
-    .flat_map(|u|
-        (v_start..v_end)
-        .map(move |v| overlap(cell_loc, u as f64, v as f64) * bins_elec_field[[u, v]])
-    )
-    .sum::<f64>()
+        .flat_map(|u| {
+            (v_start..v_end)
+                .map(move |v| overlap(cell_loc, u as f64, v as f64) * bins_elec_field[[u, v]])
+        })
+        .sum::<f64>()
 }
 
 #[derive(Clone, Copy)]
@@ -143,25 +143,9 @@ pub fn elec_field_y(coeffs: &Array2<f64>, m: usize) -> Array2<f64> {
 
 ///helper function for elec_field_cell, should we create an enum for it?
 fn bounds_check(cell_u: usize, cell_v: usize, m: usize) -> (usize, usize, usize, usize) {
-    let u_start = if cell_u == 0 {
-        0
-    } else {
-        cell_u - 1
-    };
-    let v_start = if cell_v == 0 {
-        0
-    } else {
-        cell_v - 1
-    };
-    let u_end = if cell_u == m - 1 {
-        m
-    } else {
-        cell_u + 2
-    };
-    let v_end = if cell_v == m - 1 {
-        m
-    } else {
-        cell_v + 2
-    };
+    let u_start = if cell_u == 0 { 0 } else { cell_u - 1 };
+    let v_start = if cell_v == 0 { 0 } else { cell_v - 1 };
+    let u_end = if cell_u == m - 1 { m } else { cell_u + 2 };
+    let v_end = if cell_v == m - 1 { m } else { cell_v + 2 };
     (u_start, u_end, v_start, v_end)
 }

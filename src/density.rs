@@ -63,14 +63,14 @@ pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
         for y in (lower_edge_bin + 1)..upper_edge_bin {
             //now for the left edges that aren't corners
             add_density(&mut density, left_edge_bin, y, left_width); //height of a bin is 1
-                                                                              //right edges
+                                                                     //right edges
             add_density(&mut density, right_edge_bin, y, right_width);
         }
 
         for x in (left_edge_bin + 1)..right_edge_bin {
             //now for the upper edges that aren't corners
             add_density(&mut density, x, upper_edge_bin, upper_height); //width of a bin is 1
-                                                                                 //lower edges
+                                                                        //lower edges
             add_density(&mut density, x, lower_edge_bin, lower_height);
         }
 
@@ -85,6 +85,6 @@ pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
     //subtract the DC component (the total density / m^2 )
     let dc_component = density.sum() / (m as f64).powi(2);
     let dc_array = Array::from_elem((m, m), dc_component);
-    
+
     density - dc_array
 }
