@@ -7,6 +7,7 @@ mod dct;
 mod density;
 mod ref_dct;
 mod util;
+mod wirelength;
 mod wl_grad;
 
 ///in this oversimplified example, there will be 4 logic elements placed on a 16 x 16 grid
@@ -49,7 +50,7 @@ fn main() {
     // the next step is lambda_0, that's equation 35, remember that the the equation we're
     // optimizing for is W(v) + lamdba * N(v), where v is the placement solution
     // lambda_0 requires that we have the gradient of the wirelength estimator as well as the
-    // initial electric field calculated, so we'll have to build up to that. Getting the electric
+    // initial electric field calculatedq, so we'll have to build up to that. Getting the electric
     // field will requires us to run a DCT, calculate psi, etc, so we're going to do all that for
     // the first time here:
 
@@ -57,7 +58,7 @@ fn main() {
     //all the gradients. Remember that wirelength is a scalar function: you give it the placement
     //vector / list of cell centers and then it gives you a single number.
     //
-    //However, the gradient of the wirelength will be a an array with cell count *2 
+    //However, the gradient of the wirelength will be a an array with cell count *2
     //  elements -> partial x and partial y for each of our logic elements. The really interesting thing is that we may
     //not need the wirelength estimation in order to calculate its gradient. The gradient formula is
     //very well defined, and while it's related to the wirelength function it doesn't necessarily
@@ -79,9 +80,8 @@ fn main() {
     let elec_field_x = dct::elec_field_x(&coeffs, m);
     let elec_field_y = dct::elec_field_y(&coeffs, m);
 
-   
     // the denominator of equation 35 is depends on the electric field, so we'll use our elec_field_x's and
-    //our elec_field_y's to get the electric field for each cell. We do this by multipyling the overlap of 
+    //our elec_field_y's to get the electric field for each cell. We do this by multipyling the overlap of
     // of the cell with each bin with the corresponding electric field in the given direction in a bin
     // the key line from the called functions is  lec_field += cell_overlap * bins_elec_field[[u, v]];
 
@@ -89,7 +89,7 @@ fn main() {
         .axis_iter(Axis(0))
         .clone()
         .map(|x| dct::elec_field_cell(&x.to_owned(), &elec_field_x, m));
-    
+
     let cell_fields_y = cell_centers
         .axis_iter(Axis(0))
         .clone()
@@ -104,7 +104,7 @@ fn main() {
     let lambda_lower_y = cell_fields_y.map(|y| 2.25 * y.abs()).sum::<f64>();
 
     let lambda_0_lower = lambda_lower_x + lambda_lower_y;
-    
+
     let lambda_0 = lambda_0_upper / lambda_0_lower;
 
     dbg!(
@@ -119,10 +119,10 @@ fn main() {
     //just set it to 0.044
     let alpha_0 = 0.044 * 1.;
 
-    //we still have to initialize some other parameters, but once we do: 
-    //an interesting note 
+    //we still have to initialize some other parameters, but once we do:
+    //an interesting note
     for k in 0..10 {
-        //ePlace();
+        let wl = wirelength::wl(&cell_centers, 0.2);
+        dbg!(wl);
     }
-    
 }
