@@ -127,4 +127,5 @@ fn main() {
 
         println!();
     }
+    bad_tests::check_dc_component(&cell_centers, m);
 }

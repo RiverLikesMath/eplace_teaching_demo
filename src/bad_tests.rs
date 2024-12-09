@@ -1,5 +1,9 @@
 #![allow(dead_code)]
-use crate::dct::elec_field_x;
+use crate::{
+    dct::{self, elec_field_x},
+    density,
+    ref_dct::ref_dct_coeffs,
+};
 use ndarray::Array2;
 ///eventually these should all be shifted to rust's built in testing functionality
 use ndrustfft::{nddct3, DctHandler};
@@ -33,4 +37,23 @@ pub fn test_elec_field_x(coeffs: &Array2<f64>, good: &Array2<f64>, m: usize) {
     println!("{diff:.4}");
     println!("x electr field, ration of ref and fft");
     println!("{div:.4}");
+}
+
+pub fn check_dc_component(cell_centers: &Array2<f64>, m: usize) {
+    let density_b4_sub = density::initial_density(cell_centers, m);
+
+    let ref_auvs = ref_dct_coeffs(&density_b4_sub, m);
+    let ref_dc = ref_auvs[[0, 0]];
+
+    let fft_auvs = dct::calc_coeffs(&density_b4_sub, m);
+    let fft_dc = fft_auvs[[0, 0]];
+
+    let dc_without_fft = density::dc_component(&density_b4_sub, m);
+
+    println!("reference dc calculated from the reference 2d cosine transform minus the dc calculated solely from density");
+    let dc = dc_without_fft[[0, 0]];
+    dbg!(ref_dc - dc);
+
+    println!("same, but using the fft dc calculation");
+    dbg!(fft_dc - dc);
 }

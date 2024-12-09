@@ -9,6 +9,12 @@ fn add_density(density: &mut Array2<f64>, x: usize, y: usize, added_density: f64
 ///calculates the density given the current location of each centr, by calculating overlap of each cell w/ bins
 ///there's probably a shorter clearer way to do this
 pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
+    let density: Array2<f64> = initial_density(cell_centers, m);
+    let dc = dc_component(&density, m);
+    density - dc
+}
+
+pub fn initial_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut density = Array2::<f64>::zeros((m, m));
     for cell in 0..cell_centers.len_of(Axis(0)) {
         //calculate which bins its in
@@ -82,9 +88,11 @@ pub fn calc_density(cell_centers: &Array2<f64>, m: usize) -> Array2<f64> {
         }
     }
 
-    //subtract the DC component (the total density / m^2 )
-    let dc_component = density.sum() / (m as f64).powi(2);
-    let dc_array = Array::from_elem((m, m), dc_component);
+    density
+}
 
-    density - dc_array
+pub fn dc_component(initial_density: &Array2<f64>, m: usize) -> Array2<f64> {
+    let dc_component = initial_density.sum() / (m as f64).powi(2);
+    let dc_array: Array2<f64> = Array::from_elem((m, m), dc_component);
+    dc_array
 }

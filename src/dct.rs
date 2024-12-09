@@ -55,7 +55,7 @@ pub fn apply_bins_to_cell(cell_loc: &ArrayView1<f64>, bin_data: &Array2<f64>, m:
         .flat_map(|u| {
             (v_start..v_end).map(move |v| overlap(cell_loc, u as f64, v as f64) * bin_data[[u, v]])
         })
-        .sum::<f64>()
+        .sum()
 }
 
 ///calculate the a_u_vs from eq ( ) using an fft library

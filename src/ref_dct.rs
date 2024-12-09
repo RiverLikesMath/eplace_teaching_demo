@@ -22,7 +22,7 @@ fn ref_dct_auv(density: &Array2<f64>, m: usize, u: usize, v: usize) -> f64 {
 }
 
 /// While the previous function calculated one coefficient, this calculates the entire mxm matrix of coefficients.
-pub fn ref_dct_coeff(density: &Array2<f64>, m: usize) -> Array2<f64> {
+pub fn ref_dct_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut coeffs = Array2::<f64>::zeros((m, m));
     for u in 0..m {
         for v in 0..m {
