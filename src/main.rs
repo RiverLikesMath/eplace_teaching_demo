@@ -85,46 +85,46 @@ fn main() {
     // of the cell with each bin with the corresponding electric field in the given direction in a bin
     // the key line from the called functions is  lec_field += cell_overlap * bins_elec_field[[u, v]];
 
-    let cell_fields_x = cell_centers
-        .axis_iter(Axis(0))
-        .clone()
-        .map(|x| dct::elec_field_cell(&x.to_owned(), &elec_field_x, m));
+    let cell_fields_x =
+        cell_centers.map_axis(Axis(0), |x| dct::apply_bins_to_cell(&x, &elec_field_x, m));
 
-    let cell_fields_y = cell_centers
-        .axis_iter(Axis(0))
-        .clone()
-        .map(|x| dct::elec_field_cell(&x.to_owned(), &elec_field_y, m));
+    let cell_fields_y =
+        cell_centers.map_axis(Axis(0), |x| dct::apply_bins_to_cell(&x, &elec_field_y, m));
 
     //the numerator of equation 35 is the absolute values of the x and y components of each gradient,
     //all summmed together
     let lambda_0_upper = wl_gradient_0.into_iter().map(f64::abs).sum::<f64>(); //from eq 35
 
     //the denominator is equal to the absolute value of each component of the electric field times the charge of the cell (fixed at 1.5*1.5=2.25, here, since that's our area)
-    let lambda_lower_x = cell_fields_x.map(|x| 2.25 * x.abs()).sum::<f64>();
-    let lambda_lower_y = cell_fields_y.map(|y| 2.25 * y.abs()).sum::<f64>();
+    let lambda_lower_x = cell_fields_x.map(|x| 2.25 * x.abs()).sum();
+    let lambda_lower_y = cell_fields_y.map(|y| 2.25 * y.abs()).sum();
 
     let lambda_0_lower = lambda_lower_x + lambda_lower_y;
 
     let lambda_0 = lambda_0_upper / lambda_0_lower;
-
-    dbg!(
-        lambda_lower_x,
-        lambda_lower_y,
-        lambda_0_lower,
-        lambda_0_upper,
-        lambda_0
-    );
 
     //inital alpha_0^max from the eplace algorithm (alg 3) on page 24 is 0.044 * bin width, so we'll
     //just set it to 0.044
     let alpha_0 = 0.044 * 1.;
 
     //we still have to initialize some other parameters, but once we do:
-    //an interesting note
-    for k in 0..10 {
+    let total_pot = dct::total_potential(&coeffs, &cell_centers, m);
+
+    let iter_max = 1; //maximum number of iterations - will be 10 once the loop
+                      //is done
+    for k in 0..iter_max {
         let wl = wirelength::wl(&cell_centers, 0.2);
         println!("estimated wirelength for the current iteration: ");
-        dbg!(wl);
+        dbg!(&wl);
 
+        println!("estimated potential/penalty function times lambda");
+        let lambda_pot = lambda_0 * dct::total_potential(&coeffs, &cell_centers, m);
+        dbg!(&lambda_pot);
+
+        let f_k = wl + lambda_pot;
+        println!("total objective function f_k for this iteration:");
+        dbg!(f_k);
+
+        println!();
     }
 }

@@ -1,5 +1,5 @@
 ///functions used in multiple files
-use ndarray::Array1;
+use ndarray::ArrayView1;
 use std::f64::consts::PI;
 
 ///calculates the w_u and w_v used in equations 21-25 or so
@@ -8,7 +8,7 @@ pub fn calc_w(index: usize, m: usize) -> f64 {
 }
 
 ///at some point we may rewrite density to use this
-pub fn overlap(cell_loc: &Array1<f64>, u: f64, v: f64) -> f64 {
+pub fn overlap(cell_loc: &ArrayView1<f64>, u: f64, v: f64) -> f64 {
     let left_edge = cell_loc[0] - 0.75;
     let right_edge = cell_loc[0] + 0.75;
     let upper_edge = cell_loc[1] + 0.75;
