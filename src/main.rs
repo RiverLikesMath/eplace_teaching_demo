@@ -141,10 +141,12 @@ fn main() {
         //taking the gradient is (fortunately!) a very linear operation, if f_k = wl + lambda * N,
         //grad f_k = grad(wl) + lambda * grad(N). This works very nicely even though f_k is a scalar and grad f_k is a
         //vector.
+
+        //note that this gradient should be preconditioned before being fed to the solver! that's up next 
         let grad_f_k: Array1<f64> = wl_gradient + lambda_0 * grad_penalty_k;
 
         //let new_placement = NL_Solver( &cell_centers, f_k, grad_f_k, alpha);
-        println!("latest thing calculated: grad_f_k. Next up: NL_Solver");
+        println!("latest thing calculated: grad_f_k. Next up: preconditioning and NL_Solver");
     }
 }
 
