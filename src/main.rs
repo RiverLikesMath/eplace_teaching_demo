@@ -87,7 +87,7 @@ fn main() {
 
     //for these, we are not yet multiplying anything by q_i (the charge amount, fixed 2.25 here)
 
-    //Axis(0) is columns, Axis(1) is rows! I think. 
+    //Axis(0) is columns, Axis(1) is rows! I think.
     let cell_fields_x =
         cell_centers.map_axis(Axis(1), |x| dct::apply_bins_to_cell(&x, &elec_field_x, m));
 
@@ -97,7 +97,7 @@ fn main() {
     //the numerator of equation 35 is the absolute values of the x and y components of each gradient,
     //all summmed together
 
-    let lambda_0_upper = wl_gradient_0.map( |x| x.abs()).sum(); //from eq 35
+    let lambda_0_upper = wl_gradient_0.map(|x| x.abs()).sum(); //from eq 35
 
     //the denominator is equal to the absolute value of each component of the electric field times the charge of the cell (fixed at 1.5*1.5=2.25, here, since that's our area)
     let lambda_lower_x = cell_fields_x.map(|x| 2.25 * x.abs()).sum();
@@ -116,7 +116,7 @@ fn main() {
 
     let iter_max = 1; //maximum number of iterations - will be 10 once the loop
                       //is done
-    
+
     for k in 0..iter_max {
         let wl = wirelength::wl(&cell_centers, 0.2);
         println!("estimated wirelength for the current iteration: ");
@@ -133,16 +133,16 @@ fn main() {
         //each of these arrays is of length (#of cells)*2. This is the gradient of N, our penalty function
         let grad_penalty_k = penalty_grad(&cell_fields_x, &cell_fields_y);
 
-        //technically running this function twice on the same data, but once we're actually looping 
-        //it should make sense. 
-        let wl_gradient = wl_grad::calc_wl_grad(&cell_centers);  
+        //technically running this function twice on the same data, but once we're actually looping
+        //it should make sense.
+        let wl_gradient = wl_grad::calc_wl_grad(&cell_centers);
 
         //the gradient of f_k is the gradient of the wirelength + lambda * the gradient of the penalty function
-        //taking the gradient is (fortunately!) a very linear operation, if f_k = wl + lambda * N, 
-        //grad f_k = grad(wl) + lambda * grad(N). This works very nicely even though f_k is a scalar and grad f_k is a 
-        //vector. 
+        //taking the gradient is (fortunately!) a very linear operation, if f_k = wl + lambda * N,
+        //grad f_k = grad(wl) + lambda * grad(N). This works very nicely even though f_k is a scalar and grad f_k is a
+        //vector.
         let grad_f_k: Array1<f64> = wl_gradient + lambda_0 * grad_penalty_k;
-       
+
         //let new_placement = NL_Solver( &cell_centers, f_k, grad_f_k, alpha);
         println!("latest thing calculated: grad_f_k. Next up: NL_Solver");
     }
@@ -150,10 +150,9 @@ fn main() {
 
 //interleaves/zips two arrays. I'd do this with list comprehensions and a flatten in python or haskell, unsure how
 // to do here.
-fn penalty_grad(cell_fields_x: &Array1<f64>, cell_fields_y: &Array1<f64>,) -> Array1<f64> {
+fn penalty_grad(cell_fields_x: &Array1<f64>, cell_fields_y: &Array1<f64>) -> Array1<f64> {
     let mut grad_penalty_k = Array1::<f64>::zeros(2 * cell_fields_x.len());
     for i in 0..cell_fields_x.len() {
-   
         grad_penalty_k[i] = 2.25 * cell_fields_x[i];
         grad_penalty_k[i + 1] = 2.25 * cell_fields_y[i];
     }

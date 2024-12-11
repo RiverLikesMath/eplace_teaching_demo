@@ -35,7 +35,7 @@ pub fn total_potential(coeffs: &Array2<f64>, cell_centers: &Array2<f64>, m: usiz
     //potential in each bin is an inverse 2D cosine on the updated coefficients
     let psi_bins = inverse_2ddct(&pot_coeffs, m);
 
-    //don't forget to divide by 2! We don't want to double count the contribution to total potential from 
+    //don't forget to divide by 2! We don't want to double count the contribution to total potential from
     //each cell/electric charge.  We also multiply by 2.25 for the charge of each cell
     cell_centers
         .map_axis(Axis(1), |x| 2.25 * apply_bins_to_cell(&x, &psi_bins, m))
@@ -58,7 +58,6 @@ pub fn apply_bins_to_cell(cell_loc: &ArrayView1<f64>, bin_data: &Array2<f64>, m:
             (v_start..v_end).map(move |v| overlap(cell_loc, u as f64, v as f64) * bin_data[[u, v]])
         })
         .sum()
-    
 }
 
 ///calculate the a_u_vs from eq ( ) using an fft library
