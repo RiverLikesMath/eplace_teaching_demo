@@ -1,10 +1,12 @@
 use ndarray::{array, Array1, Axis};
+use util::{k, BIN_W};
 
 //use ndrustfft::{ndfft_r2c, Complex, R2cFftHandler};
 
 mod bad_tests;
 mod dct;
 mod density;
+mod nlsolver;
 mod ref_dct;
 mod util;
 mod wirelength;
@@ -117,43 +119,57 @@ fn main() {
     let iter_max = 1; //maximum number of iterations - will be 10 once the loop
                       //is done
 
-    for k in 0..iter_max {
-        let wl = wirelength::wl(&cell_centers, 0.2);
-        println!("estimated wirelength for the current iteration: ");
-        dbg!(&wl);
+    //gamma is defined in equation 38 on page 23, it's based on the density overflow tau
+    //the paper's assumption is that starting density overflow is equal to 1.0 - we'll throw in the actual formula
+    // in a bit
 
-        println!("estimated potential/penalty function times lambda");
-        let lambda_pot = lambda_0 * dct::total_potential(&coeffs, &cell_centers, m);
-        dbg!(&lambda_pot);
+    let tau = 1.0;
+    let gamma_0: f64 = 8. * BIN_W * (10 as f64).powf(k * tau + crate::util::b);
+    let wl_0: f64 = wirelength::wl(&cell_centers, 0.2);
+    let lambda_pot: f64 = lambda_0 * dct::total_potential(&coeffs, &cell_centers, m);
 
-        let f_k = wl + lambda_pot;
-        println!("total objective function f_k for this iteration:");
-        dbg!(f_k);
+    println!("estimated wirelength for the current iteration: ");
+    dbg!(&wl_0);
 
-        //each of these arrays is of length (#of cells)*2. This is the gradient of N, our penalty function
-        let grad_penalty_k = penalty_grad(&cell_fields_x, &cell_fields_y);
+    println!("estimated potential/penalty function times lambda");
+    dbg!(&lambda_pot);
 
-        //technically running this function twice on the same data, but once we're actually looping
-        //it should make sense.
-        let wl_gradient = wl_grad::calc_wl_grad(&cell_centers);
+    let f_k = println!("total objective function f_k for this iteration:");
+    dbg!(f_k);
 
-        //the gradient of f_k is the gradient of the wirelength + lambda * the gradient of the penalty function
-        //taking the gradient is (fortunately!) a very linear operation, if f_k = wl + lambda * N,
-        //grad f_k = grad(wl) + lambda * grad(N). This works very nicely even though f_k is a scalar and grad f_k is a
-        //vector.
+    //each of these arrays is of length (#of cells)*2. This is the gradient of N, our penalty function
+    let grad_penalty_k = penalty_grad(&cell_fields_x, &cell_fields_y);
 
-        //note that this gradient should be preconditioned before being fed to the solver! that's up next 
-        let grad_f_k: Array1<f64> = wl_gradient + lambda_0 * grad_penalty_k;
+    //technically running this function twice on the same data, but once we're actually looping
+    //it should make sense.
+    let wl_gradient = wl_grad::calc_wl_grad(&cell_centers);
 
-        //let new_placement = NL_Solver( &cell_centers, f_k, grad_f_k, alpha);
-        println!("latest thing calculated: grad_f_k. Next up: preconditioning and NL_Solver");
-    }
+    //the gradient of f_k is the gradient of the wirelength + lambda * the gradient of the penalty function
+    //taking the gradient is (fortunately!) a very linear operation, if f_k = wl + lambda * N,
+    //grad f_k = grad(wl) + lambda * grad(N). This works very nicely even though f_k is a scalar and grad f_k is a
+    //vector.
+
+    //note that this gradient should be preconditioned before being fed to the solver! that's up next
+    let grad_f_k: Array1<f64> = wl_gradient + lambda_0 * grad_penalty_k;
+
+    println!("latest thing calculated: grad_f_k. Next up: preconditioning and NL_Solver");
+
+    let initial_loop_params = nlsolver::NLparams {
+        placement: cell_centers,
+        a: 1.,
+        alpha: 0.44,
+        f_k: wl_0 + lambda_pot,
+        grad_f_k: grad_f_k,
+    };
+
+    let new_placement = nlsolver::nl_solver(initial_loop_params);
 }
 
 //interleaves/zips two arrays. I'd do this with list comprehensions and a flatten in python or haskell, unsure how
 // to do here.
 fn penalty_grad(cell_fields_x: &Array1<f64>, cell_fields_y: &Array1<f64>) -> Array1<f64> {
     let mut grad_penalty_k = Array1::<f64>::zeros(2 * cell_fields_x.len());
+
     for i in 0..cell_fields_x.len() {
         grad_penalty_k[i] = 2.25 * cell_fields_x[i];
         grad_penalty_k[i + 1] = 2.25 * cell_fields_y[i];
