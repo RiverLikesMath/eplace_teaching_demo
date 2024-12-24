@@ -1,7 +1,7 @@
 use ndarray::{Array1, Array2, ArrayView1, Axis};
 use std::f64::consts::E;
 
-pub fn calc_wl_grad(cell_centers: &Array2<f64>) -> Array1<f64> {
+pub fn calc_wl_grad(cell_centers: &Array2<f64>, gamma: f64) -> Array1<f64> {
     //this is one of our most important calculations, it's used over and over and over again.
     //cell centers is just a list of x and y coordinates, right?
 
@@ -19,7 +19,6 @@ pub fn calc_wl_grad(cell_centers: &Array2<f64>) -> Array1<f64> {
         let x_i = cell_centers[[cell, 0]];
         let y_i = cell_centers[[cell, 1]];
 
-        let gamma = 0.2;
         partials[cell * 2] = calc_wl_wa_partial(&all_x_i, x_i, gamma);
         partials[cell * 2 + 1] = calc_wl_wa_partial(&all_y_i, y_i, gamma);
     }

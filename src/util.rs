@@ -3,8 +3,9 @@ use ndarray::ArrayView1;
 use std::f64::consts::PI;
 
 pub const BIN_W: f64 = 1.;
-pub const k: f64 = 20. / 9.;
-pub const b: f64 = -11. / 9.;
+pub const K: f64 = 20. / 9.;
+pub const B: f64 = -11. / 9.;
+pub const TARGET_DENSITY : f64 = 0.9;
 
 ///calculates the w_u and w_v used in equations 21-25 or so
 pub fn calc_w(index: usize, m: usize) -> f64 {

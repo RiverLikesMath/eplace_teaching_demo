@@ -1,12 +1,11 @@
-use ndarray::{array, Array1, Axis};
-use util::{k, BIN_W};
+use ndarray::array;
 
 //use ndrustfft::{ndfft_r2c, Complex, R2cFftHandler};
 
 mod bad_tests;
 mod dct;
 mod density;
-mod nlsolver;
+mod eplace;
 mod ref_dct;
 mod util;
 mod wirelength;
@@ -41,7 +40,13 @@ fn main() {
 
     let m: usize = 16; // m == sqrt(number of bins), max 1024, must be power of 2
 
-    let density = density::calc_density(&cell_centers, m); // mxm density calculation, overlaps of
+    let initial_loop_params = eplace::calc_initial_params(&cell_centers, m); 
+
+    //ok, this will eventually be in a loop somehow 
+    let new_placement = eplace::eplace(initial_loop_params,m);
+
+    
+
                                                            // cells with bin , this is what we'll run
                                                            // our first DCT on
                                                            //fine, we'll make this mutable later so rust stops complaining
@@ -69,19 +74,13 @@ fn main() {
     //wirelength gradient, the gradient of the wirelength estimator from equation 6
     //going to be a 1d array of values, even values are x, odd values are y
 
-    let wl_gradient_0 = wl_grad::calc_wl_grad(&cell_centers);
 
     //we'll also need the electric field, which requires some cosine/sine transforms of the density matrix
 
-    let charges = array![2.25, 2.25, 2.25, 2.25];
-
     //mxm matrix of a_uvs, calculated via 2D DCT, but ultimately coming from eq 21)
-    let coeffs = dct::calc_coeffs(&density, m);
 
     //these functions calculation the electric field for each bin
-    let elec_field_x = dct::elec_field_x(&coeffs, m);
-    let elec_field_y = dct::elec_field_y(&coeffs, m);
-
+ 
     // the denominator of equation 35 is depends on the electric field, so we'll use our elec_field_x's and
     //our elec_field_y's to get the electric field for each cell. We do this by multipyling the overlap of
     // of the cell with each bin with the corresponding electric field in the given direction in a bin
@@ -90,59 +89,21 @@ fn main() {
     //for these, we are not yet multiplying anything by q_i (the charge amount, fixed 2.25 here)
 
     //Axis(0) is columns, Axis(1) is rows! I think.
-    let cell_fields_x =
-        cell_centers.map_axis(Axis(1), |x| dct::apply_bins_to_cell(&x, &elec_field_x, m));
-
-    let cell_fields_y =
-        cell_centers.map_axis(Axis(1), |x| dct::apply_bins_to_cell(&x, &elec_field_y, m));
-
-    //the numerator of equation 35 is the absolute values of the x and y components of each gradient,
-    //all summmed together
-
-    let lambda_0_upper = wl_gradient_0.map(|x| x.abs()).sum(); //from eq 35
-
-    //the denominator is equal to the absolute value of each component of the electric field times the charge of the cell (fixed at 1.5*1.5=2.25, here, since that's our area)
-    let lambda_lower_x = cell_fields_x.map(|x| 2.25 * x.abs()).sum();
-    let lambda_lower_y = cell_fields_y.map(|y| 2.25 * y.abs()).sum();
-
-    let lambda_0_lower = lambda_lower_x + lambda_lower_y;
-
-    let lambda_0 = lambda_0_upper / lambda_0_lower;
+  
 
     //inital alpha_0^max from the eplace algorithm (alg 3) on page 24 is 0.044 * bin width, so we'll
     //just set it to 0.044
-    let alpha_0 = 0.044 * 1.;
-
-    //we still have to initialize some other parameters, but once we do:
-    let total_pot = dct::total_potential(&coeffs, &cell_centers, m);
-
-    let iter_max = 1; //maximum number of iterations - will be 10 once the loop
-                      //is done
 
     //gamma is defined in equation 38 on page 23, it's based on the density overflow tau
     //the paper's assumption is that starting density overflow is equal to 1.0 - we'll throw in the actual formula
     // in a bit
 
-    let tau = 1.0;
-    let gamma_0: f64 = 8. * BIN_W * (10 as f64).powf(k * tau + crate::util::b);
-    let wl_0: f64 = wirelength::wl(&cell_centers, 0.2);
-    let lambda_pot: f64 = lambda_0 * dct::total_potential(&coeffs, &cell_centers, m);
+   
 
-    println!("estimated wirelength for the current iteration: ");
-    dbg!(&wl_0);
-
-    println!("estimated potential/penalty function times lambda");
-    dbg!(&lambda_pot);
-
-    let f_k = println!("total objective function f_k for this iteration:");
-    dbg!(f_k);
+    //again, assuming initial_density_overflow is 1
+  
 
     //each of these arrays is of length (#of cells)*2. This is the gradient of N, our penalty function
-    let grad_penalty_k = penalty_grad(&cell_fields_x, &cell_fields_y);
-
-    //technically running this function twice on the same data, but once we're actually looping
-    //it should make sense.
-    let wl_gradient = wl_grad::calc_wl_grad(&cell_centers);
 
     //the gradient of f_k is the gradient of the wirelength + lambda * the gradient of the penalty function
     //taking the gradient is (fortunately!) a very linear operation, if f_k = wl + lambda * N,
@@ -150,29 +111,12 @@ fn main() {
     //vector.
 
     //note that this gradient should be preconditioned before being fed to the solver! that's up next
-    let grad_f_k: Array1<f64> = wl_gradient + lambda_0 * grad_penalty_k;
 
-    println!("latest thing calculated: grad_f_k. Next up: preconditioning and NL_Solver");
+    //for the initial loop, placement and reference placement are the same. they'll 
+    //be different in later loops (hence the clone here, which won't exist later)
 
-    let initial_loop_params = nlsolver::NLparams {
-        placement: cell_centers,
-        a: 1.,
-        alpha: 0.44,
-        f_k: wl_0 + lambda_pot,
-        grad_f_k: grad_f_k,
-    };
-
-    let new_placement = nlsolver::nl_solver(initial_loop_params);
 }
 
 //interleaves/zips two arrays. I'd do this with list comprehensions and a flatten in python or haskell, unsure how
 // to do here.
-fn penalty_grad(cell_fields_x: &Array1<f64>, cell_fields_y: &Array1<f64>) -> Array1<f64> {
-    let mut grad_penalty_k = Array1::<f64>::zeros(2 * cell_fields_x.len());
 
-    for i in 0..cell_fields_x.len() {
-        grad_penalty_k[i] = 2.25 * cell_fields_x[i];
-        grad_penalty_k[i + 1] = 2.25 * cell_fields_y[i];
-    }
-    grad_penalty_k
-}

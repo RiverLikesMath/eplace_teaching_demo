@@ -19,7 +19,7 @@ enum SorC {
 /// the cell potentials and divide by 2. From equation (insert eq here, pg# here). There
 /// may be a faster way to do this, but this is the most direct implementation of the paper's
 /// method.We'll use the a_uv coefficients calculated earlier as a parameter
-pub fn total_potential(coeffs: &Array2<f64>, cell_centers: &Array2<f64>, m: usize) -> f64 {
+pub fn total_potential(coeffs: &Array2<f64>, placement: &Array2<f64>, m: usize) -> f64 {
     // multiply each a_uv by 1/ (w_u^2+w_v^2)
     let mut pot_coeffs = Array2::<f64>::zeros((m, m));
 
@@ -37,7 +37,7 @@ pub fn total_potential(coeffs: &Array2<f64>, cell_centers: &Array2<f64>, m: usiz
 
     //don't forget to divide by 2! We don't want to double count the contribution to total potential from
     //each cell/electric charge.  We also multiply by 2.25 for the charge of each cell
-    cell_centers
+    placement
         .map_axis(Axis(1), |x| 2.25 * apply_bins_to_cell(&x, &psi_bins, m))
         .sum()
         / 2.0
