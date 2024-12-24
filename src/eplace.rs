@@ -51,7 +51,7 @@ pub fn eplace(prev: NLparams, m: usize) -> NLparams {
             prev.grad_f_k,
         ),
         f_k: calc_f_k(&placement, density_overflow, lambda, m),
-        grad_f_k: grad_f_k.clone(),
+        grad_f_k,
         ref_placement,
     }
     //initially, alpha_0 is given to us as a flat 0.44 * BIN_W
@@ -84,8 +84,7 @@ pub fn calc_initial_params(cell_centers: &Array2<f64>, m: usize) -> NLparams {
     let wl_gradient_0 = wl_grad::calc_wl_grad(cell_centers, gamma_0);
     let fields = calc_cell_fields(cell_centers, m);
     let lambda_0 = calc_lambda(cell_centers, &fields, gamma_0);
-    let wl_0: f64 = wirelength::wl(cell_centers, 0.2);
-    dbg!(wl_0);
+
     NLparams {
         placement: cell_centers.clone(),
         ref_placement: cell_centers.clone(),

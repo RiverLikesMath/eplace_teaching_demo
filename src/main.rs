@@ -42,8 +42,23 @@ fn main() {
 
     let initial_loop_params = eplace::calc_initial_params(&cell_centers, m);
 
-    //ok, this will eventually be in a loop somehow
-    let new_placement = eplace::eplace(initial_loop_params, m);
+    // ok, this will eventually be in a loop somehow
+    // let mut iterations: Vec<NLparams> = Vec::new();
+    // iterations.push(initial_loop_params);
+
+    //my heart is telling me to do this recursively, but the closest thing to the paper
+    //would be a for loop
+    let mut curr_eplace_iteration = initial_loop_params;
+    for i in 1..10 {
+        println!("Beginning new loop");        
+        println!("current iteration is: {i}");
+        
+        let prev = curr_eplace_iteration;
+        curr_eplace_iteration = eplace::eplace(prev, m);
+
+        println!("current objective function is: ");
+        dbg!(curr_eplace_iteration.f_k);
+    }
 
     // cells with bin , this is what we'll run
     // our first DCT on
