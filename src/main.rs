@@ -46,6 +46,7 @@ fn main() {
     //would be a for loop
     let mut curr_eplace_iteration = initial_loop_params;
     for i in 1..10 {
+        println!();
         println!("Beginning new loop");
         println!("current iteration is: {i}");
 

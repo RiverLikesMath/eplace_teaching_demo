@@ -1,10 +1,12 @@
 #![allow(dead_code)]
+
 use crate::{
     dct::{self, elec_field_x},
-    density,
+    density, eplace,
     ref_dct::ref_dct_coeffs,
+    wl_grad::calc_wl_grad,
 };
-use ndarray::Array2;
+use ndarray::{Array2, Axis};
 ///eventually these should all be shifted to rust's built in testing functionality
 use ndrustfft::{nddct3, DctHandler};
 
@@ -56,4 +58,22 @@ pub fn check_dc_component(cell_centers: &Array2<f64>, m: usize) {
 
     println!("same, but using the fft dc calculation");
     dbg!(fft_dc - dc);
+}
+
+pub fn shape_test(cell_centers: &Array2<f64>, m: usize) {
+    dbg!(&cell_centers);
+
+    let fields = eplace::calc_cell_fields(cell_centers, m);
+
+    let wl_gradient = calc_wl_grad(cell_centers, 0.8);
+    let lambda = eplace::calc_lambda(cell_centers, &fields, 0.8);
+    let grad = eplace::calc_grad_f_k(&wl_gradient, lambda, fields);
+    dbg!(&grad);
+    dbg!(grad.len_of(Axis(0)));
+
+    //should be arranged in a similar format to cell_centers
+    dbg!(grad
+        .to_shape((grad.len_of(Axis(0)) / 2, 2))
+        .map_err(|err| println!("{:?}", err))
+        .ok());
 }

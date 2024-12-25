@@ -28,9 +28,15 @@ pub struct CellElectricFields {
 
 ///The core eplace algorithm, called during each iteration .
 pub fn eplace(prev: NLparams, m: usize) -> NLparams {
+    //reshape the gradient to be a number of cells x 2 matrix
+    let reshaped_grad = &prev
+        .grad_f_k
+        .to_shape((prev.grad_f_k.len_of(Axis(0)) / 2, 2))
+        .expect(" wasn't able to reshape the f_k gradient");
+
     //each placement is based on the so-called "reference placement " - a list of cell locations
     // calculated from the actual placement from the last iteratin.
-    let placement = &prev.ref_placement - prev.alpha * &prev.grad_f_k;
+    let placement = &prev.ref_placement - prev.alpha * reshaped_grad;
 
     //how high above the target density are we? This variable (which the paper refers to as tau) is used in a few places
     let density_overflow = calc_density_overflow(&prev.ref_placement, m);
@@ -119,7 +125,7 @@ pub fn calc_cell_fields(placement: &Array2<f64>, m: usize) -> CellElectricFields
 /// as well as vertex degrees. could a cell be connected to multiple nets?
 /// a vertex is incident to a net if the vertex is one of the endpoints of that edge
 /// the degree of a vertex is how many edges are incident to that vertex.
-pub fn precondition(grad_f_k: Array1<f64>, lambda: f64) -> Array1<f64> {
+fn precondition(grad_f_k: Array1<f64>, lambda: f64) -> Array1<f64> {
     // interpretation one:  |E_i| is the number of nets a cell is connected to
     // interpretation two: |E_i| is the number of vertices in the single net that the cell's a part of
 
@@ -161,7 +167,6 @@ fn calc_density_overflow(placement: &Array2<f64>, m: usize) -> f64 {
     //denominator is the area of each cell summed up,
     let denominator = 2.25 * (placement.len_of(Axis(0)) as f64);
 
-    dbg!(placement.len_of(Axis(0)));
     let tau = numerator / denominator;
     dbg!(tau);
     tau
@@ -187,7 +192,7 @@ pub fn calc_lambda(placement: &Array2<f64>, fields: &CellElectricFields, gamma: 
 }
 
 ///gamma is used in the wirelength estimator (equation 6 on page 5). It's actually calculated in equation 38 on page 23
-pub fn calc_gamma(density_overflow: f64) -> f64 {
+fn calc_gamma(density_overflow: f64) -> f64 {
     8. * BIN_W * (10_f64).powf(K * density_overflow + B) // 8.0 * bin_width * 10^(k *tau + b), where k = 20/9 and b = -11/9.
                                                          // as tau gets smaller, this will reduce gamma, which will approach to
                                                          // 8 * bin_width * 10^(-11/9). In our case, this'd put gamma at a minimum of approximately
@@ -208,7 +213,7 @@ pub fn calc_grad_f_k(
 
 ///The penalty gradient is the electric field at each point multiplied by its charge. In our case, the charge of each
 /// cell is a fixed 1.5 * 1.5 = 2.25
-pub fn calc_penalty_grad(fields: CellElectricFields) -> Array1<f64> {
+fn calc_penalty_grad(fields: CellElectricFields) -> Array1<f64> {
     let mut grad_penalty_k = Array1::<f64>::zeros(2 * fields.x_fields.len());
 
     for i in 0..fields.x_fields.len() {
