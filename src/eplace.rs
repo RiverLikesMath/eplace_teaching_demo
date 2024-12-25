@@ -17,30 +17,50 @@ pub struct NLparams {
     pub grad_f_k: Array1<f64>,
 }
 
-//get a proper name for this. the various intermediate calculations, electric fields, wirelength gradient
-//things like that
+//a struct to hold the electric fields  for each of the cells. Storing x and y separately,
+// and they're calculated slightly differently! each of x_fields and y_fields has length
+//equal to the number of cells / logic elements
 pub struct CellElectricFields {
     //electric field in x direction
     x_fields: Array1<f64>,
     y_fields: Array1<f64>,
 }
 
+///The core eplace algorithm, called during each iteration .
 pub fn eplace(prev: NLparams, m: usize) -> NLparams {
+    //each placement is based on the so-called "reference placement " - a list of cell locations
+    // calculated from the actual placement from the last iteratin.
     let placement = &prev.ref_placement - prev.alpha * &prev.grad_f_k;
-    let a: f64 = (1. + (4. * prev.a * prev.a + 1.).sqrt()) / 2.;
+
+    //how high above the target density are we? This variable (which the paper refers to as tau) is used in a few places
     let density_overflow = calc_density_overflow(&prev.ref_placement, m);
+
+    //gamma is a parameter to tune our wirelength estimator. it starts high and ultimately depends on density overflow
     let gamma = calc_gamma(density_overflow);
+
+    //wirelength gradient, the gradient of the wirelength estimator from equation 6 on page 5
+    // partial derivative with respect to x and y the equation for each cell!
     let wl_gradient = wl_grad::calc_wl_grad(&prev.ref_placement, gamma);
 
-    //electric fields of the cell
+    //electric fields of each cell. Calculating them involves a 2D DCT on the density of cells in each bin, multiplying
+    //each of the coefficients (the a_u_vs referenced in equation 21 on page 12, and then calculating) by formulas based
+    // on equation 24 on page 13, and then taknig the inverse DCST or DSCT
     let fields = calc_cell_fields(&prev.ref_placement, m);
 
+    //lambda is the lagrange multiplier (I believe!), used to link the value we're optimizing for (the wirelength) and
+    //the constraint / penalty function (the electric potential we're calculating )
     let lambda: f64 = calc_lambda(&prev.ref_placement, &fields, gamma);
 
+    //gradient of the objective function - grad (wirelength estimator) + lambda * grad( penalty function )
     let grad_f_k = calc_grad_f_k(&wl_gradient, lambda, fields);
+
+    //a is an optimization parameter used in the NL solver, which is algorithm 2 on page 18. It'll be used to calculate
+    //the reference placement
+    let a: f64 = (1. + (4. * prev.a * prev.a + 1.).sqrt()) / 2.;
+
+    //reference placement is what we'll be actually feeding to most of our algorithm in the next iteration
     let ref_placement = &placement + (a - 1.) * (&placement - &prev.placement) / a;
 
-    let density_overflow = calc_density_overflow(&placement, m);
     NLparams {
         placement: placement.clone(),
         a,
@@ -50,46 +70,27 @@ pub fn eplace(prev: NLparams, m: usize) -> NLparams {
             &grad_f_k,
             prev.grad_f_k,
         ),
+        //f_k is our objective function. Never used directly, but we're calculating it so we can see if it's getting minimized correctly
         f_k: calc_f_k(&placement, density_overflow, lambda, m),
         grad_f_k,
         ref_placement,
     }
-    //initially, alpha_0 is given to us as a flat 0.44 * BIN_W
-    //u_k is our placement, and v_k is what's known as a "referenc placement". As we dig
-    //into the algorithm and properly implement it we'll have to keep our ducks in a row
-    // on it.
-
-    //alpha * grad_f_k is scalar multiplication of an array
-    //line 3 of our nesterov solver - the beating heart of the algorithm!
-    //very important line of code
-
-    //a_0 = 1
-
-    //line 4 of nesterov solver on page 18, a is an optimization parameter, so I'm not entirely sure why this
-    //is the way it is. we start with the section in the square root because rust math is a bit confusing for em
-    //and here's a
-
-    //let elec_field_x =
-    //new.grad_f_k =
-
-    //line 5 of nesterov solver , calclutating v_kplus1
-
-    //line 6 of nesterov solver. ultimately we may want to pass in and return a struct with all the parameters and stuff
-    // for each iteration of eplace
 }
 
+///There are a variety of starter values and special cases that are fed to the first iteration of eplace and the NLSolver - they're collected here
 pub fn calc_initial_params(cell_centers: &Array2<f64>, m: usize) -> NLparams {
-    let initial_density_overflow = 1.0;
+    let initial_density_overflow = 1.0; //we can calculate this but will assume 1.0 for now. something to play with!
     let gamma_0: f64 = calc_gamma(initial_density_overflow);
     let wl_gradient_0 = wl_grad::calc_wl_grad(cell_centers, gamma_0);
     let fields = calc_cell_fields(cell_centers, m);
     let lambda_0 = calc_lambda(cell_centers, &fields, gamma_0);
 
     NLparams {
-        placement: cell_centers.clone(),
+        placement: cell_centers.clone(), // before the first loop, placement and
+        //reference placement are the same , but in general they're slightly different
         ref_placement: cell_centers.clone(),
-        a: 1.,
-        alpha: 0.044 * 1.,
+        a: 1., //prescribed starting value, later iterations will use this to calculate the next iteration's a.
+        alpha: 0.044 * BIN_W, //similar
         f_k: calc_f_k(cell_centers, initial_density_overflow, lambda_0, m),
         grad_f_k: calc_grad_f_k(&wl_gradient_0, lambda_0, fields),
     }
@@ -131,18 +132,19 @@ pub fn precondition(grad_f_k: Array1<f64>, lambda: f64) -> Array1<f64> {
     precon * grad_f_k // hopefully, f64 * Array1<f64> is implemented, we work around if not
 }
 
+///This one's a doozy! Ultimately, the paper goes through a lot of trouble to prove that the inverse of something called the lipschitz constant
+/// is acceptable for our steplength. The lipschitz constant is itself approximated based on equation 29 on page 19. Here we take the reciprical
+/// of that equation - that's our alpha!
 fn inverse_lipschitz_constant(
-    placement: &Array2<f64>,
-    prev_placement: &Array2<f64>,
+    ref_placement: &Array2<f64>,
+    prev_ref_placement: &Array2<f64>,
     grad_f_k: &Array1<f64>,
     prev_grad_f_k: Array1<f64>,
 ) -> f64 {
-    // || placement - previous_placement||
-
-    // || (3,5) || = (3.pow(2) + 5.pow(2)).sqrt();
-    // sqrt( 3^2 + 5^2 )
-
-    let numerator: f64 = (placement - prev_placement).map(|x| x * x).sum().sqrt();
+    let numerator: f64 = (ref_placement - prev_ref_placement)
+        .map(|x| x * x)
+        .sum()
+        .sqrt();
     let denominator: f64 = (grad_f_k - prev_grad_f_k).map(|x| x * x).sum().sqrt();
 
     numerator / denominator
@@ -184,18 +186,28 @@ pub fn calc_lambda(placement: &Array2<f64>, fields: &CellElectricFields, gamma: 
     numerator / (denominator_x + denominator_y)
 }
 
+///gamma is used in the wirelength estimator (equation 6 on page 5). It's actually calculated in equation 38 on page 23
 pub fn calc_gamma(density_overflow: f64) -> f64 {
-    8. * BIN_W * (10_f64).powf(K * density_overflow + B)
+    8. * BIN_W * (10_f64).powf(K * density_overflow + B) // 8.0 * bin_width * 10^(k *tau + b), where k = 20/9 and b = -11/9.
+                                                         // as tau gets smaller, this will reduce gamma, which will approach to
+                                                         // 8 * bin_width * 10^(-11/9). In our case, this'd put gamma at a minimum of approximately
+                                                         // 0.7 or 0.8. We can tweak these variables if we'd like
 }
 
+///the gradient of the objective function is the gradient of equation 9 on page 6. This'll ultimately be multiplied by alpha and added to our
+///reference placement to get our next placement.
 pub fn calc_grad_f_k(
     wl_gradient: &Array1<f64>,
     lambda: f64,
     fields: CellElectricFields,
 ) -> Array1<f64> {
+    //we also implement the preconditioner specified on page 19 and 20 - it helps with numerical convergence. The calculated gradient is fed to the
+    //preconditioner.
     precondition(wl_gradient + lambda * calc_penalty_grad(fields), lambda)
 }
 
+///The penalty gradient is the electric field at each point multiplied by its charge. In our case, the charge of each
+/// cell is a fixed 1.5 * 1.5 = 2.25
 pub fn calc_penalty_grad(fields: CellElectricFields) -> Array1<f64> {
     let mut grad_penalty_k = Array1::<f64>::zeros(2 * fields.x_fields.len());
 
