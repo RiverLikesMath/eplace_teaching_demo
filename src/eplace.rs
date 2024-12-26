@@ -155,8 +155,7 @@ fn inverse_lipschitz_constant(
 
     let denominator: f64 = (grad_f_k - prev_grad_f_k).map(|x| x * x).sum().sqrt();
 
-    let calcaluted_alpha = numerator / denominator;
-    0.044
+    numerator / denominator
 }
 
 //equation 37, page 22

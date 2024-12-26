@@ -53,6 +53,7 @@ fn main() {
         let prev = curr_eplace_iteration;
         curr_eplace_iteration = eplace::eplace(prev, m);
 
+        //this will mean we have a minimum of 5 iterations, probably a better way to write it 
         if i % (max_iter/5) ==  0 {
             debugs(&curr_eplace_iteration, i, m); 
 
