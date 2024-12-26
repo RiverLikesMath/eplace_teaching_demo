@@ -1,3 +1,4 @@
+use eplace::NLparams;
 use ndarray::array;
 
 mod bad_tests;
@@ -33,10 +34,11 @@ fn main() {
         [6.0, 6.0],
         [5.5, 5.5],
         [4.75, 4.75],
-        [5.25, 12.25],
+       [5.25, 12.25],
+        [40., 40.]
     ];
 
-    let m: usize = 16; // m == sqrt(number of bins), max 1024, must be power of 2
+    let m: usize = 64; // m == sqrt(number of bins), max 1024, must be power of 2
 
     //before we start the loop, we need an initial set of parameters to feed to
     //the nl solver - those are all calculated and grabbed from here
@@ -45,15 +47,26 @@ fn main() {
     //my heart is telling me to do this recursively, but the closest thing to the paper
     //would be a for loop
     let mut curr_eplace_iteration = initial_loop_params;
-    for i in 1..10 {
-        println!();
-        println!("Beginning new loop");
-        println!("current iteration is: {i}");
+    let max_iter = 200;
+    for i in 1..max_iter{
 
         let prev = curr_eplace_iteration;
         curr_eplace_iteration = eplace::eplace(prev, m);
 
-        println!("current objective function is: ");
-        dbg!(curr_eplace_iteration.f_k);
+        if i % (max_iter/5) ==  0 {
+            debugs(&curr_eplace_iteration, i, m); 
+
+        }
     }
+    debugs(&curr_eplace_iteration, 1000000,m) ;   
+
+}
+
+fn debugs(curr_eplace_iteration: &NLparams, i:usize, m: usize) {
+    println!();
+
+    println!("Beginning new loop");
+    println!("current iteration is: {i}");
+    println!("current objective function is: ");
+    dbg!(curr_eplace_iteration.f_k);
 }

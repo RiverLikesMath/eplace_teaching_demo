@@ -60,13 +60,13 @@ pub fn eplace(prev: NLparams, m: usize) -> NLparams {
     //gradient of the objective function - grad (wirelength estimator) + lambda * grad( penalty function )
     let grad_f_k = calc_grad_f_k(&wl_gradient, lambda, fields);
 
+    
     //a is an optimization parameter used in the NL solver, which is algorithm 2 on page 18. It'll be used to calculate
     //the reference placement
     let a: f64 = (1. + (4. * prev.a * prev.a + 1.).sqrt()) / 2.;
-
     //reference placement is what we'll be actually feeding to most of our algorithm in the next iteration
-    let ref_placement = &placement + (a - 1.) * (&placement - &prev.placement) / a;
-
+    let ref_placement = &placement + (prev.a - 1.) / a * (&placement - &prev.placement);
+  
     NLparams {
         placement: placement.clone(),
         a,
@@ -77,7 +77,7 @@ pub fn eplace(prev: NLparams, m: usize) -> NLparams {
             prev.grad_f_k,
         ),
         //f_k is our objective function. Never used directly, but we're calculating it so we can see if it's getting minimized correctly
-        f_k: calc_f_k(&placement, density_overflow, lambda, m),
+        f_k: calc_f_k(&ref_placement, density_overflow, lambda, m),
         grad_f_k,
         ref_placement,
     }
@@ -147,13 +147,16 @@ fn inverse_lipschitz_constant(
     grad_f_k: &Array1<f64>,
     prev_grad_f_k: Array1<f64>,
 ) -> f64 {
+
     let numerator: f64 = (ref_placement - prev_ref_placement)
         .map(|x| x * x)
         .sum()
         .sqrt();
+
     let denominator: f64 = (grad_f_k - prev_grad_f_k).map(|x| x * x).sum().sqrt();
 
-    numerator / denominator
+    let calcaluted_alpha = numerator / denominator;
+    0.044
 }
 
 //equation 37, page 22
@@ -168,7 +171,7 @@ fn calc_density_overflow(placement: &Array2<f64>, m: usize) -> f64 {
     let denominator = 2.25 * (placement.len_of(Axis(0)) as f64);
 
     let tau = numerator / denominator;
-    dbg!(tau);
+//    dbg!(tau);
     tau
 }
 pub fn calc_f_k(placement: &Array2<f64>, density_overflow: f64, lambda: f64, m: usize) -> f64 {
@@ -189,6 +192,7 @@ pub fn calc_lambda(placement: &Array2<f64>, fields: &CellElectricFields, gamma: 
     let denominator_y = fields.y_fields.map(|y| 2.25 * y.abs()).sum();
 
     numerator / (denominator_x + denominator_y)
+    
 }
 
 ///gamma is used in the wirelength estimator (equation 6 on page 5). It's actually calculated in equation 38 on page 23
