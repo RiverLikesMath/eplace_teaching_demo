@@ -68,9 +68,11 @@ pub fn calc_coeffs(density: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut coeffs = Array2::<f64>::zeros((m, m));
 
     //cosine transform on the rows
+    //double check that this is actually transforming rows!!!
     nddct2(density, &mut first_pass, &handler, 0);
 
     //cosine transform on the columns
+    //double check that this is actually transforming columns!!!
     nddct2(&first_pass, &mut coeffs, &handler, 1);
 
     coeffs.mapv_inplace(|x| x / ((m as f64).powi(2)));
@@ -114,10 +116,14 @@ fn inverse_2ddct(buffer: &Array2<f64>, m: usize) -> Array2<f64> {
     let mut first_pass = Array2::<f64>::zeros((m, m));
     let mut inverse = Array2::<f64>::zeros((m, m));
 
-    //cosine transform on the rows
+    //cosine transform on the rows -- this is probably incorrect!!! Do some testing please 
+    //I am no longer sure that axis 0 is rows and axis 1 is columns. This may be why the 
+    //eplace coefficient calculations and the dct calculations aren't matching 
     nddct3(buffer, &mut first_pass, &handler, 0);
 
-    //cosine transform on the columns
+    //cosine transform on the columns -- this is probably incorrect!!! 
+    //we may want to convert this to use a rows and columns methods more directly 
+    //since we understand the library a bit better. 
     nddct3(&first_pass, &mut inverse, &handler, 1);
 
     inverse

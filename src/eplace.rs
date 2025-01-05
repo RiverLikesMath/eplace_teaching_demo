@@ -8,6 +8,7 @@ use crate::wirelength;
 use crate::wl_grad;
 use ndarray::{Array1, Array2, Axis};
 
+#[derive(Clone)]
 pub struct NLparams {
     pub placement: Array2<f64>,
     pub ref_placement: Array2<f64>,
