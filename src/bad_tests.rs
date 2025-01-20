@@ -63,10 +63,10 @@ pub fn check_dc_component(cell_centers: &Array2<f64>, m: usize) {
 pub fn shape_test(cell_centers: &Array2<f64>, m: usize) {
     dbg!(&cell_centers);
 
-    let fields = eplace::calc_cell_fields(cell_centers, m);
+    let fields: eplace::CellElectricFields = eplace::calc_cell_fields(cell_centers, m);
 
     let wl_gradient = calc_wl_grad(cell_centers, 0.8);
-    let lambda = eplace::calc_lambda(cell_centers, &fields, 0.8);
+    let lambda = eplace::calc_lambda_0(cell_centers, &fields, 0.8);
     let grad = eplace::calc_grad_f_k(&wl_gradient, lambda, fields);
     dbg!(&grad);
     dbg!(grad.len_of(Axis(0)));

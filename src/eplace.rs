@@ -54,20 +54,19 @@ pub fn eplace(prev: NLparams, m: usize) -> NLparams {
     // on equation 24 on page 13, and then taknig the inverse DCST or DSCT
     let fields = calc_cell_fields(&prev.ref_placement, m);
 
-    //lambda is the lagrange multiplier (I believe!), used to link the value we're optimizing for (the wirelength) and
-    //the constraint / penalty function (the electric potential we're calculating )
-    let lambda: f64 = calc_lambda(&prev.ref_placement, &fields, gamma);
-
-    //gradient of the objective function - grad (wirelength estimator) + lambda * grad( penalty function )
-    let grad_f_k = calc_grad_f_k(&wl_gradient, lambda, fields);
-
-    
     //a is an optimization parameter used in the NL solver, which is algorithm 2 on page 18. It'll be used to calculate
     //the reference placement
     let a: f64 = (1. + (4. * prev.a * prev.a + 1.).sqrt()) / 2.;
     //reference placement is what we'll be actually feeding to most of our algorithm in the next iteration
     let ref_placement = &placement + (prev.a - 1.) / a * (&placement - &prev.placement);
-  
+
+    //lambda is the lagrange multiplier (I believe!), used to link the value we're optimizing for (the wirelength) and
+    //the constraint / penalty function (the electric potential we're calculating )
+    let lambda: f64 = calc_lambda(1_f64, &ref_placement, &prev.ref_placement);
+
+    //gradient of the objective function - grad (wirelength estimator) + lambda * grad( penalty function )
+    let grad_f_k = calc_grad_f_k(&wl_gradient, lambda, fields);
+
     NLparams {
         placement: placement.clone(),
         a,
@@ -90,7 +89,7 @@ pub fn calc_initial_params(cell_centers: &Array2<f64>, m: usize) -> NLparams {
     let gamma_0: f64 = calc_gamma(initial_density_overflow);
     let wl_gradient_0 = wl_grad::calc_wl_grad(cell_centers, gamma_0);
     let fields = calc_cell_fields(cell_centers, m);
-    let lambda_0 = calc_lambda(cell_centers, &fields, gamma_0);
+    let lambda_0 = calc_lambda_0(cell_centers, &fields, gamma_0);
 
     NLparams {
         placement: cell_centers.clone(), // before the first loop, placement and
@@ -148,7 +147,6 @@ fn inverse_lipschitz_constant(
     grad_f_k: &Array1<f64>,
     prev_grad_f_k: Array1<f64>,
 ) -> f64 {
-
     let numerator: f64 = (ref_placement - prev_ref_placement)
         .map(|x| x * x)
         .sum()
@@ -156,7 +154,15 @@ fn inverse_lipschitz_constant(
 
     let denominator: f64 = (grad_f_k - prev_grad_f_k).map(|x| x * x).sum().sqrt();
 
-    numerator / denominator
+    //turns out the mins and maxes on alpha are for the CG solver - the nesterov
+    //solver is supposed to function without
+    //that being said, we'll set some arbitrary ones for now and can remove them later!
+
+    let alpha_min = 0.044 * BIN_W / 10.;
+    let alpha_max = 0.044 * BIN_W * 10.;
+
+    let upper_bounded_alpha = (numerator / denominator).min(alpha_max);
+    upper_bounded_alpha.max(alpha_min)
 }
 
 //equation 37, page 22
@@ -170,9 +176,7 @@ fn calc_density_overflow(placement: &Array2<f64>, m: usize) -> f64 {
     //denominator is the area of each cell summed up,
     let denominator = 2.25 * (placement.len_of(Axis(0)) as f64);
 
-    let tau = numerator / denominator;
-//    dbg!(tau);
-    tau
+    numerator / denominator
 }
 pub fn calc_f_k(placement: &Array2<f64>, density_overflow: f64, lambda: f64, m: usize) -> f64 {
     let wl: f64 = wirelength::wl(placement, calc_gamma(density_overflow));
@@ -185,14 +189,43 @@ pub fn calc_f_k(placement: &Array2<f64>, density_overflow: f64, lambda: f64, m: 
 }
 
 //f should have the electric fields for each cell in the x and y direction
-pub fn calc_lambda(placement: &Array2<f64>, fields: &CellElectricFields, gamma: f64) -> f64 {
+pub fn calc_lambda_0(placement: &Array2<f64>, fields: &CellElectricFields, gamma: f64) -> f64 {
     let wl_gradient = wl_grad::calc_wl_grad(placement, gamma);
     let numerator = wl_gradient.map(|x| x.abs()).sum();
     let denominator_x = fields.x_fields.map(|x| 2.25 * x.abs()).sum();
     let denominator_y = fields.y_fields.map(|y| 2.25 * y.abs()).sum();
 
     numerator / (denominator_x + denominator_y)
-    
+}
+
+#[allow(non_snake_case)]
+///lambda's subsequent calculations are in equation 36 on page 21
+pub fn calc_lambda(
+    prev_lambda: f64,
+    ref_placement: &Array2<f64>,
+    prev_ref_placement: &Array2<f64>,
+) -> f64 {
+    //delta_HPWL_ref is the expected wirelength increase per iteration
+    //delta almost universally means "change in" mathematically, it's the triangle
+    let delta_HPWL_ref = 350000_f64; //this is at 3.5 * 10^5, may adjust for this example
+                                     //cause HPWL is very small usually
+
+    let HPWL_k: f64 = hpwl(ref_placement) - hpwl(prev_ref_placement);
+    let mu_0: f64 = 1.1;
+    let mu_k = mu_0.powf(-1_f64 * HPWL_k / delta_HPWL_ref);
+    mu_k * prev_lambda
+}
+
+fn hpwl(placement: &Array2<f64>) -> f64 {
+    let mut max_delta_x: f64 = 0.;
+    let mut max_delta_y: f64 = 0.;
+    for row in placement.rows() {
+        for row2 in placement.rows() {
+            max_delta_x = max_delta_x.max((row[0] - row2[0]).abs());
+            max_delta_y = max_delta_y.max((row[1] - row2[1]).abs());
+        }
+    }
+    max_delta_x + max_delta_y
 }
 
 ///gamma is used in the wirelength estimator (equation 6 on page 5). It's actually calculated in equation 38 on page 23
