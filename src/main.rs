@@ -34,7 +34,7 @@ fn main() {
         [6.0, 6.0],
         [5.5, 5.5],
         [4.75, 4.75],
-       [5.25, 12.25],
+        [5.25, 12.25],
         [40., 40.]
     ];
 
@@ -47,27 +47,25 @@ fn main() {
     //my heart is telling me to do this recursively, but the closest thing to the paper
     //would be a for loop
     let mut curr_eplace_iteration = initial_loop_params;
-    let max_iter = 200;
-    for i in 1..max_iter{
-
+    let max_iter = 100;
+    for i in 1..max_iter {
         let prev = curr_eplace_iteration;
         curr_eplace_iteration = eplace::eplace(prev, m);
 
-        //this will mean we have a minimum of 5 iterations, probably a better way to write it 
-        if i % (max_iter/5) ==  0 {
-            debugs(&curr_eplace_iteration, i, m); 
-
+        //this will mean we have a minimum of 5 iterations, probably a better way to write it
+        if i % (max_iter / 5) == 0 {
+            debugs(&curr_eplace_iteration, i);
         }
     }
-    debugs(&curr_eplace_iteration, 1000000,m) ;   
-
+    debugs(&curr_eplace_iteration, 1000000);
 }
 
-fn debugs(curr_eplace_iteration: &NLparams, i:usize, m: usize) {
+fn debugs(curr_eplace_iteration: &NLparams, i: usize) {
     println!();
 
     println!("Beginning new loop");
     println!("current iteration is: {i}");
     println!("current objective function is: ");
     dbg!(curr_eplace_iteration.f_k);
+    dbg!(curr_eplace_iteration.alpha);
 }

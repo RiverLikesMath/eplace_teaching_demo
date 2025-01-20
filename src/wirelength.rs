@@ -9,9 +9,7 @@ pub fn wl(cell_centers: &Array2<f64>, gamma: f64) -> f64 {
 
     let all_y_i = cell_centers.column(1);
 
-    let wl = wl_component(all_x_i, gamma) + wl_component(all_y_i, gamma);
-    //println!("wirelength: {wl}");
-    wl
+    wl_component(all_x_i, gamma) + wl_component(all_y_i, gamma)
 }
 
 fn wl_component(all_comp: ArrayView1<f64>, gamma: f64) -> f64 {
