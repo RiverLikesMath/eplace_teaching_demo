@@ -1,11 +1,13 @@
 ///functions used in multiple files
-use ndarray::ArrayView1;
+use ndarray::{ArrayView1,Axis};
 use std::f64::consts::PI;
 
 pub const BIN_W: f64 = 1.;
 pub const K: f64 = 20. / 9.;
 pub const B: f64 = -11. / 9.;
 pub const TARGET_DENSITY: f64 = 0.9;
+pub const ROWS: Axis = Axis(0); 
+pub const COLS: Axis = Axis(1); 
 
 ///calculates the w_u and w_v used in equations 21-25 or so
 pub fn calc_w(index: usize, m: usize) -> f64 {
