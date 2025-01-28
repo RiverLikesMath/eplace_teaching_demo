@@ -212,10 +212,11 @@ pub fn calc_lambda(
 
     let HPWL_k: f64 = hpwl(ref_placement) - hpwl(prev_ref_placement);
     let mu_0: f64 = 1.1;
-    let mu_k = mu_0.powf(-1_f64 * HPWL_k / delta_HPWL_ref);
+    let mu_k = mu_0.powf( 1_f64 - (HPWL_k / delta_HPWL_ref) );
     mu_k * prev_lambda
 }
 
+///equation 1, page 4. The thing we're trying to minimize! 
 fn hpwl(placement: &Array2<f64>) -> f64 {
     let mut max_delta_x: f64 = 0.;
     let mut max_delta_y: f64 = 0.;
