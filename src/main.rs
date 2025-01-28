@@ -9,6 +9,7 @@ mod ref_dct;
 mod util;
 mod wirelength;
 mod wl_grad;
+mod elfplace; 
 
 ///in this oversimplified example, there will be a small number of  logic elements placed on an mxm grid
 ///each logic element will be 1.5 pixel wide and tall so we don't have to worry about eplace's
@@ -47,7 +48,7 @@ fn main() {
     //my heart is telling me to do this recursively, but the closest thing to the paper
     //would be a for loop
     let mut curr_eplace_iteration = initial_loop_params;
-    let max_iter = 100;
+    let max_iter = 5;
     for i in 1..max_iter {
         let prev = curr_eplace_iteration;
         curr_eplace_iteration = eplace::eplace(prev, m);
