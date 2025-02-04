@@ -2,7 +2,10 @@ use crate::eplace::NLparams;
 use ndarray::Array1;
 
 pub fn elfplace( ) {
+    //we'll calculate wirelength for each resource and sum them up 
     let wl = todo!(); 
+
+    //f_k is the objective function, equation 9 
     let f_k: f64 = calc_f_k(wl);
 
     //gradient f k is calcluated in equation 13, and then a preconditioner will be applied to it before it's fed 
@@ -17,20 +20,22 @@ fn calc_f_k(wl: f64  ) -> f64 {
     //iterating over resource types 
     let resources : Array1<NLparams> = todo!(); 
 
-    //this combined potential willbe an f64, the length of the vector containing the potentials for each resource 
+    //the potentials will be an array of f64s
         //we'll probably need to add a new adjusted area in order to calculate potential
         //the area of each unit is adjusted for routability, pin density, 
         //and clustering compatibility. We need to do that, and *that* area will be used 
         //in the potential function. 
-    let combined_potential = todo!(); 
-    let initial_combined_potential = todo!(); 
+    let potentials: Array1<f64>  = todo!(); 
+    //total potential of each resource in the starting placement
+    let initial_potentials: Array1<f64>   = todo!(); 
+
     //beta is used primarily in equation 12, but also shows up when calculating lambda
     let beta: f64 = todo!(); 
 
     //lambda section
     let prev_lambda : Array1<f64> = todo!(); 
     let prev_step_size: f64 = todo!();  
-    let lambda: Array1<f64>  = calc_next_lambda(&prev_lambda, prev_step_size , beta, combined_potential, initial_combined_potential);
+    let lambda: Array1<f64>  = calc_next_lambda(&prev_lambda, prev_step_size , beta, potentials, initial_potentials);
 
     //using s for the resource index cause that's what the paper does
     let error_term: f64 = resources.iter().enumerate().map(|(s,resource)| {
@@ -41,7 +46,8 @@ fn calc_f_k(wl: f64  ) -> f64 {
 
  }  
 
-
+///length of a vector using the standard euclidean metric (measuring the length of a line in cartesian coordinates, 
+/// for example). 
  fn metric_length (vector : &Array1<f64>) -> f64 {
     vector.map( |&x| x.powi(2)).sum().sqrt()
  }
@@ -60,13 +66,16 @@ fn calc_f_k(wl: f64  ) -> f64 {
  fn calc_next_lambda (prev_lambda: &Array1<f64>, prev_step_size: f64, beta: f64,  potentials : Array1<f64> , initial_potentials: Array1<f64> ) -> Array1<f64> { 
     let normed_potential: f64 = metric_length(&potentials)/metric_length(&initial_potentials); //length combined potentials over the length of initial potentials
     
+    //step size is equation 22 on page 4 - how much we should multiply the subgradient by. 
     let step_size :f64 = calc_step_size(false, prev_step_size, beta, normed_potential); 
+
     let normalized_subgrad = calc_normalized_subgrad(&prev_lambda, potentials, initial_potentials );
     prev_lambda + step_size * prev_lambda / metric_length(&normalized_subgrad)
 
  }
 
-/// Equation 22, page 4. The 
+/// Equation 22, page 4. This is the step size to see how far in the direction of the subgradient of lamba we should 
+/// move when calculating our new lambda. It may be used elsewhere as well! this is t^(k) in equations 21 and 22   
  fn calc_step_size (start: bool, prev_step_size : f64, beta: f64, normed_potential: f64) -> f64 { 
      let alpha_h = 1.06;
      let alpha_l = 1.05; 
@@ -74,7 +83,10 @@ fn calc_f_k(wl: f64  ) -> f64 {
         alpha_h - 1_f64
      }
      else  {
-        let big_fraction_mess =   (beta * normed_potential + 1_f64 ).ln()  / ( 1_f64 + (beta * normed_potential+ 1_f64).ln()  );
+        //unsure what base of logarithm is, so assuming ln 
+        let log_term = (beta* normed_potential +1_f64 ).ln(); 
+        //Now it's small fraction mess! :D 
+        let big_fraction_mess =   log_term  / ( 1_f64 + log_term);
          //return the big fraction mess based term when k > 0
          prev_step_size *  ( big_fraction_mess * (alpha_h - alpha_l) )+ alpha_l
      }
