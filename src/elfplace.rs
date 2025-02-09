@@ -1,12 +1,12 @@
-use crate::eplace::NLparams;
+use crate::eplace;
+use crate::wirelength;
 use ndarray::Array1;
 
-pub fn elfplace() {
+pub fn elfplace(prev_resources: Array1<eplace::NLparams>) {
     //we'll calculate wirelength for each resource and sum them up
-    let wl = todo!();
 
     //f_k is the objective function, equation 9
-    let f_k: f64 = calc_f_k(wl);
+    let f_k: f64 = calc_f_k(prev_resources);
 
     //gradient f k is calcluated in equation 13, and then a preconditioner will be applied to it before it's fed
     //to the solver
@@ -15,10 +15,17 @@ pub fn elfplace() {
 
 ///the objective function we're looking to find is equation 9 on page 3 of elfplace
 /// It's a modification of the objective function for eplace and works in a similar
-/// way.
-fn calc_f_k(wl: f64) -> f64 {
-    //iterating over resource types
-    let resources: Array1<NLparams> = todo!();
+/// way - it's just that everything is done for multiple resources and we're optimizing
+/// on a vector of resources instead of just the single placement before
+fn calc_f_k(prev_resources: Array1<eplace::NLparams>) -> f64 {
+    //wirelength is found similarly to eplace, but for multiple resource types
+    //gamma is calculated using the density overflow of each resource - but I haven't yet checked to
+    //see if the overflow calculations are the same between eplace and elfplace. We may do that during the session today
+    //if we have time!
+    let gamma: f64 = todo!();
+    let wl = prev_resources
+        .map(|res| wirelength::wl(&res.ref_placement, gamma))
+        .sum();
 
     //the potentials will be an array of f64s
     //we'll probably need to add a new adjusted area in order to calculate potential
@@ -44,7 +51,7 @@ fn calc_f_k(wl: f64) -> f64 {
     );
 
     //using s for the resource index cause that's what the paper does
-    let error_term: f64 = resources
+    let error_term: f64 = prev_resources
         .iter()
         .enumerate()
         .map(|(s, resource)| {
