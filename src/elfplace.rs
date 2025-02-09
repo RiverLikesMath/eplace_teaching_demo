@@ -64,27 +64,31 @@ fn calc_f_k(wl: f64  ) -> f64 {
  /// The normalized subgradient is calculated outside the function in equation 20, 
  /// which we'll be implementing soon! 
  fn calc_next_lambda (prev_lambda: &Array1<f64>, prev_step_size: f64, beta: f64,  potentials : Array1<f64> , initial_potentials: Array1<f64> ) -> Array1<f64> { 
-    let normed_potential: f64 = metric_length(&potentials)/metric_length(&initial_potentials); //length combined potentials over the length of initial potentials
+    
+    let normed_potentials = &potentials / &initial_potentials; 
     
     //step size is equation 22 on page 4 - how much we should multiply the subgradient by. 
-    let step_size :f64 = calc_step_size(false, prev_step_size, beta, normed_potential); 
+    let step_size :f64 = calc_step_size(false, prev_step_size, beta, normed_potentials); 
 
-    let normalized_subgrad = calc_normalized_subgrad(&prev_lambda, potentials, initial_potentials );
-    prev_lambda + step_size * prev_lambda / metric_length(&normalized_subgrad)
+    let normalized_subgrad = calc_normalized_subgrad(normed_potentials, beta );
+    prev_lambda + step_size * normalized_subgrad / metric_length(&normalized_subgrad)
 
  }
 
 /// Equation 22, page 4. This is the step size to see how far in the direction of the subgradient of lamba we should 
 /// move when calculating our new lambda. It may be used elsewhere as well! this is t^(k) in equations 21 and 22   
- fn calc_step_size (start: bool, prev_step_size : f64, beta: f64, normed_potential: f64) -> f64 { 
+ fn calc_step_size (start: bool, prev_step_size : f64, beta: f64, normed_potentials: Array1<f64>) -> f64 { 
      let alpha_h = 1.06;
      let alpha_l = 1.05; 
+
+     let total_normed_potential = metric_length(&normed_potentials);
+
      if start{ 
         alpha_h - 1_f64
      }
      else  {
         //unsure what base of logarithm is, so assuming ln 
-        let log_term = (beta* normed_potential +1_f64 ).ln(); 
+        let log_term = (beta* total_normed_potential +1_f64 ).ln(); 
         //Now it's small fraction mess! :D 
         let big_fraction_mess =   log_term  / ( 1_f64 + log_term);
          //return the big fraction mess based term when k > 0
@@ -95,8 +99,8 @@ fn calc_f_k(wl: f64  ) -> f64 {
 
  ///equation 20, page 4. The normalized subgradient is so called because it uses the normalized potential instead of raw potential - this is so the different
  /// resources more accurately reflect their level of density violation 
- fn calc_normalized_subgrad(prev_lambda: &Array1<f64>, potentials : Array1<f64>, initial_potentials: Array1<f64> ) -> Array1<f64>{
-    todo!()
+ fn calc_normalized_subgrad( normed_potentials: Array1<f64>, beta:f64 ) -> Array1<f64>{
+   normed_potentials.map( |npot| npot + beta * norm_pot.pow_i(2)/2_f64 )
  }
  fn calc_c_s() -> f64 {
     todo!(); 
