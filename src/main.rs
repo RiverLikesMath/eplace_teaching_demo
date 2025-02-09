@@ -4,12 +4,12 @@ use ndarray::array;
 mod bad_tests;
 mod dct;
 mod density;
+mod elfplace;
 mod eplace;
 mod ref_dct;
 mod util;
 mod wirelength;
 mod wl_grad;
-mod elfplace; 
 
 ///in this oversimplified example, there will be a small number of  logic elements placed on an mxm grid
 ///each logic element will be 1.5 pixel wide and tall so we don't have to worry about eplace's

@@ -119,12 +119,12 @@ fn inverse_2ddct(buffer: &Array2<f64>, m: usize) -> Array2<f64> {
     //cosine transform on the rows -- this is probably incorrect!!! Do some testing please
     //I am no longer sure that axis 0 is rows and axis 1 is columns. This may be why the
     //eplace coefficient calculations and the dct calculations aren't matching
-    for col in buffer.columns() { 
+    for col in buffer.columns() {
         println!("{:.3}", col);
-    }    
-    println!("col_maybe now"); 
+    }
+    println!("col_maybe now");
     for col_maybe in buffer.axis_iter(Axis(1)) {
-        println!("{:.3}", col_maybe); 
+        println!("{:.3}", col_maybe);
     }
 
     nddct3(buffer, &mut first_pass, &handler, 0);
