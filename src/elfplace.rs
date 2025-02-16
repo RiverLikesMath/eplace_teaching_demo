@@ -2,8 +2,15 @@ use crate::eplace;
 use crate::wirelength;
 use ndarray::Array1;
 
+///length of a vector using the standard euclidean metric (measuring the length of a line in cartesian coordinates,
+/// for example).
+fn metric_length(vector: &Array1<f64>) -> f64 {
+    vector.map(|&x| x.powi(2)).sum().sqrt()
+}
+
+///the big 'un!
 pub fn elfplace(prev_resources: Array1<eplace::NLparams>) {
-    //we'll calculate wirelength for each resource and sum them up
+    //we will calculate wirelength for each resource and sum them up
 
     //f_k is the objective function, equation 9
     let f_k: f64 = calc_f_k(prev_resources);
@@ -19,13 +26,17 @@ pub fn elfplace(prev_resources: Array1<eplace::NLparams>) {
 /// on a vector of resources instead of just the single placement before
 fn calc_f_k(prev_resources: Array1<eplace::NLparams>) -> f64 {
     //wirelength is found similarly to eplace, but for multiple resource types
+
     //gamma is calculated using the density overflow of each resource - but I haven't yet checked to
-    //see if the overflow calculations are the same between eplace and elfplace. We may do that during the session today
-    //if we have time!
-    let gamma: f64 = todo!();
-    let wl = prev_resources
-        .map(|res| wirelength::wl(&res.ref_placement, gamma))
-        .sum();
+    //see if the overflow calculations are the same between eplace and elfplace. It looks like they aren't so we'll
+    //implement elfplace's overflow separately . Each resource will have a separate gamma for its wirelength estimator
+    let gammas: Array1<f64> = prev_resources.map(|res| eplace::calc_gamma(calc_overflow(res)));
+
+    let wl: f64 = prev_resources
+        .iter()
+        .enumerate()
+        .map(|(i, res)| wirelength::wl(&res.ref_placement, gammas[i]))
+        .sum(); //probably needs a flat map!
 
     //the potentials will be an array of f64s
     //we'll probably need to add a new adjusted area in order to calculate potential
@@ -62,12 +73,10 @@ fn calc_f_k(prev_resources: Array1<eplace::NLparams>) -> f64 {
     wl + error_term
 }
 
-///length of a vector using the standard euclidean metric (measuring the length of a line in cartesian coordinates,
-/// for example).
-fn metric_length(vector: &Array1<f64>) -> f64 {
-    vector.map(|&x| x.powi(2)).sum().sqrt()
+///the overflow for elfplace uses a related but slightly different formula, equation 7 on page 2
+fn calc_overflow(prev_resource: &eplace::NLparams ) -> f64 {
+    todo!()
 }
-
 ///can this be ripped directly from eplace or is it modified?
 /// It's looking like it's a fairly complicated calculation,
 /// with later adjustments once we do the area adjustments for
@@ -86,8 +95,9 @@ fn calc_next_lambda(
     potentials: Array1<f64>,
     initial_potentials: Array1<f64>,
 ) -> Array1<f64> {
-    let normed_potentials = &potentials / &initial_potentials;
+    let normed_potentials: Array1<f64> = &potentials / &initial_potentials;
 
+    // old was let normed_potential = metric_length( potentials) / metric_length (initial_potentials);
     //step size is equation 22 on page 4 - how much we should multiply the subgradient by.
     let step_size: f64 = calc_step_size(false, prev_step_size, beta, &normed_potentials);
 

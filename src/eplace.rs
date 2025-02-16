@@ -230,7 +230,7 @@ fn hpwl(placement: &Array2<f64>) -> f64 {
 }
 
 ///gamma is used in the wirelength estimator (equation 6 on page 5). It's actually calculated in equation 38 on page 23
-fn calc_gamma(density_overflow: f64) -> f64 {
+pub fn calc_gamma(density_overflow: f64) -> f64 {
     8. * BIN_W * (10_f64).powf(K * density_overflow + B) // 8.0 * bin_width * 10^(k *tau + b), where k = 20/9 and b = -11/9.
                                                          // as tau gets smaller, this will reduce gamma, which will approach to
                                                          // 8 * bin_width * 10^(-11/9). In our case, this'd put gamma at a minimum of approximately
