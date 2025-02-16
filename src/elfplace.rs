@@ -1,5 +1,6 @@
 use crate::eplace;
 use crate::wirelength;
+use crate::density; 
 use ndarray::{Array1, Array2};
 
 ///length of a vector using the standard euclidean metric (measuring the length of a line in cartesian coordinates,
@@ -81,10 +82,11 @@ fn calc_f_k(prev_resources: Array1<eplace::NLparams>, m: usize) -> f64 {
 
 ///the overflow for elfplace uses a related but slightly different formula, equation 7 on page 2
 fn calc_overflow(prev_resource: &eplace::NLparams, resource_capacities: &ndarray::Array2<f64>,  m: usize ) -> f64 {
-    let numerator = 0_f64;
-    let denominator = 0_f64; 
-    
-    let bin_resource_areas: Array2<f64> = todo!(); 
+    let mut numerator = 0_f64;
+    let mut denominator = 0_f64; 
+
+    //this is a bit of a hack  
+    let bin_resource_areas: Array2<f64> = density::calc_density(&prev_resource.ref_placement, m); 
 
     for u in 0..m { 
        for v in 0..m { 
