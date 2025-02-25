@@ -1,6 +1,6 @@
+use crate::density;
 use crate::eplace;
 use crate::wirelength;
-use crate::density; 
 use ndarray::{Array1, Array2};
 
 ///length of a vector using the standard euclidean metric (measuring the length of a line in cartesian coordinates,
@@ -10,7 +10,7 @@ fn metric_length(vector: &Array1<f64>) -> f64 {
 }
 
 ///the big 'un!
-pub fn elfplace(prev_resources: Array1<eplace::NLparams>, m:usize ) {
+pub fn elfplace(prev_resources: Array1<eplace::NLparams>, m: usize) {
     //we will calculate wirelength for each resource and sum them up
 
     //f_k is the objective function, equation 9
@@ -31,13 +31,17 @@ fn calc_f_k(prev_resources: Array1<eplace::NLparams>, m: usize) -> f64 {
     //gamma is calculated using the density overflow of each resource - but I haven't yet checked to
     //see if the overflow calculations are the same between eplace and elfplace. It looks like they aren't so we'll
     //implement elfplace's overflow separately . Each resource will have a separate gamma for its wirelength estimator
-    let resource_capacities : Array1 < Array2<f64> > = todo!(); 
-    let gammas: Array1<f64> = prev_resources.iter().
-                                flat_map( |res| resource_capacities. map ( 
-                                   move  |capacity|
-                                         eplace::calc_gamma(calc_overflow(res, capacity, m))
-                                   )
-                                ).collect();
+
+    //array of resource capacaties for each bin, by resource
+    let resource_capacities: Array1<Array2<f64>> = todo!();
+
+    let gammas: Array1<f64> = prev_resources
+        .iter()
+        .flat_map(|res| {
+            resource_capacities
+                .map(move |capacity| eplace::calc_gamma(calc_overflow(res, capacity, m)))
+        })
+        .collect();
 
     let wl: f64 = prev_resources
         .iter()
@@ -81,23 +85,29 @@ fn calc_f_k(prev_resources: Array1<eplace::NLparams>, m: usize) -> f64 {
 }
 
 ///the overflow for elfplace uses a related but slightly different formula, equation 7 on page 2
-fn calc_overflow(prev_resource: &eplace::NLparams, resource_capacities: &ndarray::Array2<f64>,  m: usize ) -> f64 {
+fn calc_overflow(
+    prev_resource: &eplace::NLparams,
+    resource_capacities: &ndarray::Array2<f64>,
+    m: usize,
+) -> f64 {
     let mut numerator = 0_f64;
-    let mut denominator = 0_f64; 
+    let mut denominator = 0_f64;
 
-    //this is a bit of a hack  
-    let bin_resource_areas: Array2<f64> = density::calc_density(&prev_resource.ref_placement, m); 
+    //this is a bit of a hack  , there will most likely a separate calculate area later and a untangling of
+    //areas and densities and number of bins. Currently an mxm array, subject to change!
+    let bin_resource_areas: Array2<f64> = density::calc_density(&prev_resource.ref_placement, m);
 
-    for u in 0..m { 
-       for v in 0..m { 
-          let bin_resource_capacity: f64 = resource_capacities[[u,v]];
-          let bin_resource_area: f64  = bin_resource_areas[[u,v]]; 
-          numerator +=  (bin_resource_area - bin_resource_capacity ).max(0.0_f64); 
-          denominator += bin_resource_area;
-       }
-    }
-    
-    numerator/denominator
+    //todo: use zip with rust iterators! bin_resource_areas.iter().zip( //etc. )
+    //this should be equation 7)
+    let numerator: f64 = bin_resource_areas
+        .iter()
+        .zip(resource_capacities.iter())
+        .map(|(area, capacity)| (area - capacity).max(0.0_f64))
+        .sum();
+
+    let denominator = bin_resource_areas.sum();
+
+    numerator / denominator
 }
 ///can this be ripped directly from eplace or is it modified?
 /// It's looking like it's a fairly complicated calculation,
