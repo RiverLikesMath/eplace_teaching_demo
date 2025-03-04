@@ -1,6 +1,8 @@
 use eplace::NLparams;
 use ndarray::array;
 
+//use nextpnr; 
+
 mod bad_tests;
 mod dct;
 mod density;
@@ -18,6 +20,25 @@ mod wl_grad;
 ///silly, but it'll make the demonstration a bit easier
 #[allow(unused_variables)] //we're allowing unused variables in main here, at least for now.
 fn main() {
+    /* 
+        calls to nextpnr
+        import cells , import nets 
+
+            how do we use these to compute things like 
+                resource capacity - pin or other data from nextpnr? 
+                similar things - other info about board that may be needed in order to run code, especially elfplace and multistatics 
+                
+        construct internal/placement grid 
+
+        eplace/elfplace loop - now the results of this are being sent to nextpnr when converged
+        what the what git/github?
+        rough algorithm: 
+            get context from nextpnr 
+            pull all relevant data from the context (???), preferring nextPNR's data types when possible 
+            run eplace, elfplace, or multistatics to convergence 
+            return to nextpnr
+     */
+    
     let cell_centers = array![
         [28. / 8., 28. / 8.], //x,y, initial placement
         [56. / 8., 58. / 8.],
