@@ -38,6 +38,24 @@ fn main() {
             run eplace, elfplace, or multistatics to convergence 
             return to nextpnr
      */
+
+    /*
+        //n and m are the dimensions of an array
+        //what is this array? The tilegrid of the fpga
+        //each grid element of the array will have some amount of bels in it 
+
+        let n = getGridDimX(ctx);
+        let m = getGridDimY(ctx);
+
+        // we'll probably also have to call getBels() -- iterator over every bel
+        // bels can be of the different elfplace types - they'll have to be filtered and sorted 
+        // ideally called once as part of startup 
+        //bel groups - yay! eplace will not really care about them, elfplace and the multistatics will 
+
+
+        //n x m array
+        let nets = Nets::new(ctx); //it's something! 
+     */
     
     let cell_centers = array![
         [28. / 8., 28. / 8.], //x,y, initial placement
