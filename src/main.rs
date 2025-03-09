@@ -1,7 +1,7 @@
 use eplace::NLparams;
 use ndarray::array;
 
-//use nextpnr; 
+//use nextpnr;
 
 mod bad_tests;
 mod dct;
@@ -20,43 +20,82 @@ mod wl_grad;
 ///silly, but it'll make the demonstration a bit easier
 #[allow(unused_variables)] //we're allowing unused variables in main here, at least for now.
 fn main() {
-    /* 
-        calls to nextpnr
-        import cells , import nets 
+    /*
+       calls to nextpnr
+       import cells , import nets
 
-            how do we use these to compute things like 
-                resource capacity - pin or other data from nextpnr? 
-                similar things - other info about board that may be needed in order to run code, especially elfplace and multistatics 
-                
-        construct internal/placement grid 
+           how do we use these to compute things like
+               resource capacity - pin or other data from nextpnr?
+               similar things - other info about board that may be needed in order to run code, especially elfplace and multistatics
 
-        eplace/elfplace loop - now the results of this are being sent to nextpnr when converged
-        what the what git/github?
-        rough algorithm: 
-            get context from nextpnr 
-            pull all relevant data from the context (???), preferring nextPNR's data types when possible 
-            run eplace, elfplace, or multistatics to convergence 
-            return to nextpnr
-     */
+       construct internal/placement grid
+
+       eplace/elfplace loop - now the results of this are being sent to nextpnr when converged
+       what the what git/github?
+       rough algorithm:
+           get context from nextpnr
+           pull all relevant data from the context (???), preferring nextPNR's data types when possible
+           run eplace, elfplace, or multistatics to convergence
+           return to nextpnr
+    */
 
     /*
         //n and m are the dimensions of an array
         //what is this array? The tilegrid of the fpga
-        //each grid element of the array will have some amount of bels in it 
+        //each grid element of the array will have some amount of bels in it
 
         let n = getGridDimX(ctx);
         let m = getGridDimY(ctx);
 
         // we'll probably also have to call getBels() -- iterator over every bel
-        // bels can be of the different elfplace types - they'll have to be filtered and sorted 
-        // ideally called once as part of startup 
-        //bel groups - yay! eplace will not really care about them, elfplace and the multistatics will 
+        // bels can be of the different elfplace types - they'll have to be filtered and sorted
+        // ideally called once as part of startup
 
+        //bel groups - yay! eplace will not really care about them, elfplace and the multistatics will
+        let bels = getBels(ctx, gridX, gridY);  //???. what would this return? An iterator over all bels
+
+        let belBuckets = getBelBuckets(ctx); //something like this
+
+
+
+        //bel buckets storytime
+            //the cells that can fit inside a bel
+            //resource capacity will be bels - varies by resource type because different resources may only fit in certain bel buckets
+
+        //there's also
 
         //n x m array
-        let nets = Nets::new(ctx); //it's something! 
-     */
-    
+        let nets = Nets::new(ctx); //it's something!
+
+
+        //when calculating overflow - we need resource capacities for a given bin .
+        //bins are a placement specific data structure
+        //We will need:
+            //A mapping from the internal placement (2D array of points ) to the structures from nextPnr
+            //A way to grab the applicable bels for a given placement bin so we can calculate resource capacity
+            //resource capacity will be calculated in terms of area in our placement algorithm . Thus:
+            //we will need a way to translate bell counts in a specific in to areas
+
+    */
+
+    /*
+       spitballin (maaaaaaagic)
+           we have type instance - wraps usize - "we have imbued this number with meaning!"
+           distinguish between physical or filler instances
+                       what resource is assoicated with an instance
+                       what resource type(s) an instance is - **big question**, can an instance be of multiple resource types , we'll have to dig into the papers
+                       The area A_i
+
+
+           we will have type bins - bins are ultimately a 2D concepts (usize, usize) or something - 2D at some point even if internal representations are flat
+
+           and then we have lambda, psi , f_k, other things that currently live in NLParams
+
+           big question:
+               are we rebuilding every iteration or keeping up to date?
+                   my haskell brain wants to err on the side of rebuilding and immutable data structures as much as possible. feasible?
+    */
+
     let cell_centers = array![
         [28. / 8., 28. / 8.], //x,y, initial placement
         [56. / 8., 58. / 8.],
